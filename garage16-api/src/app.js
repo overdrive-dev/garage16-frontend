@@ -11,7 +11,10 @@ const uploadRoutes = require('./routes/upload.routes');
 const app = express();
 
 // Middlewares
-app.use(cors());
+app.use(cors({
+  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  credentials: true
+}));
 app.use(express.json());
 
 // Conexão com MongoDB

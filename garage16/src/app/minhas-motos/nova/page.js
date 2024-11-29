@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import ImageUpload from '@/components/ImageUpload';
-import AdminRoute from '@/middleware/adminRoute';
 
 export default function NovaMoto() {
   const router = useRouter();
@@ -50,7 +49,7 @@ export default function NovaMoto() {
         }
       });
 
-      const response = await fetch('/api/motos', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/motos`, {
         method: 'POST',
         body: formDataToSend,
         headers: {

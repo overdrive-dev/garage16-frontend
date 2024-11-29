@@ -2,6 +2,7 @@
 
 import { useState, useRef } from 'react';
 import Image from 'next/image';
+import { getCloudinaryUrl } from '@/utils/cloudinary';
 
 export default function ImageUpload({ images = [], onChange, maxImages = 10 }) {
   const [dragActive, setDragActive] = useState(false);
@@ -115,7 +116,7 @@ export default function ImageUpload({ images = [], onChange, maxImages = 10 }) {
               <div className="relative aspect-square rounded-lg overflow-hidden bg-gray-900">
                 {typeof image === 'string' ? (
                   <Image
-                    src={image}
+                    src={getCloudinaryUrl(image, { width: 300, height: 300 })}
                     alt={`Imagem ${index + 1}`}
                     fill
                     className="object-cover"

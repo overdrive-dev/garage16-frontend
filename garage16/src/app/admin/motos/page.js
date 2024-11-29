@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import AdminRoute from '@/middleware/adminRoute';
+import { getCloudinaryUrl } from '@/utils/cloudinary';
 
 export default function AdminMotos() {
   const [motos, setMotos] = useState([]);
@@ -93,7 +94,7 @@ export default function AdminMotos() {
                       <div className="flex items-center">
                         <div className="relative h-10 w-10 flex-shrink-0">
                           <Image
-                            src={moto.imagens[0]}
+                            src={getCloudinaryUrl(moto.imagens[0], { width: 100, height: 100 })}
                             alt={moto.titulo}
                             fill
                             className="object-cover rounded"

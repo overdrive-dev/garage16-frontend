@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { motos } from "@/data/motos";
+import { getCloudinaryUrl } from '@/utils/cloudinary';
 
 export default function Home() {
   return (
@@ -12,7 +13,7 @@ export default function Home() {
             <div className="bg-gray-800 rounded-lg overflow-hidden hover:ring-2 hover:ring-[#FD4308] transition-all">
               <div className="relative h-48">
                 <Image
-                  src={moto.imagens[0]}
+                  src={getCloudinaryUrl(moto.imagens[0])}
                   alt={moto.titulo}
                   fill
                   className="object-cover"

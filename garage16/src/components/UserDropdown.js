@@ -53,6 +53,20 @@ export default function UserDropdown() {
 
       {isOpen && (
         <div className="absolute right-0 mt-2 w-48 bg-gray-800 rounded-lg shadow-lg py-1 z-50">
+          <Link
+            href="/minhas-motos"
+            className="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white"
+            onClick={() => setIsOpen(false)}
+          >
+            Minhas Motos
+          </Link>
+          <Link
+            href="/minhas-motos/nova"
+            className="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white"
+            onClick={() => setIsOpen(false)}
+          >
+            Anunciar Moto
+          </Link>
           {user?.role === 'admin' && (
             <>
               <Link

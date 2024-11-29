@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useAuth } from '@/contexts/AuthContext';
+import { getCloudinaryUrl } from '@/utils/cloudinary';
 
 const STATUS_COLORS = {
   'pendente': 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20',
@@ -34,7 +35,7 @@ export default function MinhasMotos() {
 
   const fetchMotos = async () => {
     try {
-      const response = await fetch('/api/motos/minhas', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/motos/minhas`, {
         headers: {
           Authorization: `Bearer ${await user.getIdToken()}`
         }
@@ -86,7 +87,7 @@ export default function MinhasMotos() {
             >
               <div className="relative w-32 h-32 flex-shrink-0">
                 <Image
-                  src={moto.imagens[0]}
+                  src={getCloudinaryUrl(moto.imagens[0], { width: 300, height: 300 })}
                   alt={moto.titulo}
                   fill
                   className="object-cover rounded-lg"

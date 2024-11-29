@@ -2,6 +2,7 @@ import Image from "next/image";
 import { getMotoById } from "@/data/motos";
 import { notFound } from "next/navigation";
 import AgendarVisitaButton from "@/components/AgendarVisitaButton";
+import { getCloudinaryUrl } from '@/utils/cloudinary';
 
 // Marcar a função como assíncrona
 async function getData(id) {
@@ -20,10 +21,11 @@ export default async function VeiculoDetalhes({ params }) {
       {/* Slider de imagens */}
       <div className="w-full h-[500px] bg-gray-800 rounded-lg mb-8 relative">
         <Image
-          src={moto.imagens[0]}
+          src={getCloudinaryUrl(moto.imagens[0], { width: 1200, height: 800 })}
           alt={moto.titulo}
           fill
           className="object-cover rounded-lg"
+          priority
         />
       </div>
 

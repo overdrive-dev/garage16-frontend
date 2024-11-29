@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import AdminRoute from '@/middleware/adminRoute';
+import { getCloudinaryUrl } from '@/utils/cloudinary';
 
 const STATUS_COLORS = {
   'pendente': 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20',
@@ -95,7 +96,7 @@ export default function AprovarAnuncios() {
                 <div className="flex gap-6">
                   <div className="relative w-48 h-48 flex-shrink-0">
                     <Image
-                      src={anuncio.imagens[0]}
+                      src={getCloudinaryUrl(anuncio.imagens[0], { width: 500, height: 500 })}
                       alt={anuncio.titulo}
                       fill
                       className="object-cover rounded-lg"
