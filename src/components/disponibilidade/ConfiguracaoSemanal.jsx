@@ -52,6 +52,10 @@ export default function ConfiguracaoSemanal({ horarios, onChange }) {
     setModalConfig({ isOpen: false, diaId: null, horarios: [] });
   };
 
+  const handleModalClose = () => {
+    setModalConfig({ isOpen: false, diaId: null, horarios: [] });
+  };
+
   const getHorariosForDate = (date) => {
     const diaSemana = diasSemana.find(d => 
       d.id === date.toLocaleDateString('pt-BR', { weekday: 'short' }).toLowerCase().replace('.', '')
@@ -65,84 +69,52 @@ export default function ConfiguracaoSemanal({ horarios, onChange }) {
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      <div className="space-y-4">
-        {diasSemana.map(({ id, nome }) => (
-          <div key={id} className="flex items-center space-x-4">
-            <div className="w-32">
-              <span className="text-gray-200">{nome}</span>
-            </div>
-            
-            {horarios[id].ativo ? (
-              <>
-                <div className="flex-1">
-                  <button
-                    type="button"
-                    onClick={() => handleOpenModal(id)}
-                    className="w-full bg-gray-700 border border-gray-600 text-gray-200 rounded-md px-3 py-2 text-left hover:bg-gray-600 transition-colors"
-                  >
-                    {horarios[id].horarios.length > 0 
-                      ? horarios[id].horarios.join(' - ')
-                      : 'Clique para adicionar horários'
-                    }
-                  </button>
-                </div>
+    <div className="space-y-4">
+      {diasSemana.map(({ id, nome }) => (
+        <div key={id} className="flex items-center space-x-4">
+          <div className="w-32">
+            <span className="text-gray-200">{nome}</span>
+          </div>
+          
+          {horarios[id].ativo ? (
+            <>
+              <div className="flex-1">
                 <button
                   type="button"
-                  onClick={() => toggleDia(id)}
-                  className="p-2 text-gray-400 hover:text-gray-200"
+                  onClick={() => handleOpenModal(id)}
+                  className="w-full bg-gray-700 border border-gray-600 text-gray-200 rounded-md px-3 py-2 text-left hover:bg-gray-600 transition-colors"
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                  </svg>
+                  {horarios[id].horarios.length > 0 
+                    ? horarios[id].horarios.join(' - ')
+                    : 'Clique para adicionar horários'
+                  }
                 </button>
-              </>
-            ) : (
+              </div>
               <button
                 type="button"
                 onClick={() => toggleDia(id)}
-                className="text-orange-500 hover:text-orange-400 text-sm"
+                className="p-2 text-gray-400 hover:text-gray-200"
               >
-                Adicionar horário
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
               </button>
-            )}
-          </div>
-        ))}
-      </div>
-
-      <div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700">
-        <h4 className="text-sm font-medium text-gray-200 mb-4">
-          Visualização da disponibilidade
-        </h4>
-        <Calendar
-          selectedDate={null}
-          onChange={() => {}}
-          getHorariosForDate={getHorariosForDate}
-          disabledDates={[
-            ...Array.from({ length: 365 }, (_, i) => {
-              const date = new Date();
-              date.setDate(date.getDate() - i - 1);
-              return date;
-            })
-          ]}
-          tileClassName={({ date }) => {
-            const diaSemana = diasSemana.find(d => 
-              d.id === date.toLocaleDateString('pt-BR', { weekday: 'short' }).toLowerCase().replace('.', '')
-            );
-            const isDisponivel = diaSemana && horarios[diaSemana.id].ativo;
-            const isPast = date < new Date().setHours(0, 0, 0, 0);
-            
-            return `
-              flex items-center justify-center
-              ${isDisponivel && !isPast ? 'bg-emerald-500/10 hover:bg-emerald-500/20' : ''}
-            `;
-          }}
-        />
-      </div>
+            </>
+          ) : (
+            <button
+              type="button"
+              onClick={() => toggleDia(id)}
+              className="text-orange-500 hover:text-orange-400 text-sm"
+            >
+              Adicionar horário
+            </button>
+          )}
+        </div>
+      ))}
 
       <HorarioModal
         isOpen={modalConfig.isOpen}
-        onClose={() => setModalConfig({ isOpen: false, diaId: null, horarios: [] })}
+        onClose={handleModalClose}
         onConfirm={handleHorarioConfirm}
         selectedHorarios={modalConfig.horarios}
         data={modalConfig.diaId ? new Date() : null}

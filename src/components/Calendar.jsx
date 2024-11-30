@@ -73,71 +73,58 @@ export default function Calendar({ selectedDate, onChange, disabledDates = [], g
           const isDayToday = isToday(day);
           const isCurrentMonth = isSameMonth(day, currentMonth);
 
-          // Classes base para o botão
           const baseClasses = `
-            w-full h-10 focus:outline-none relative
+            w-full h-10 focus:outline-none relative group
             ${!isCurrentMonth ? 'text-gray-600' : 'text-gray-100'}
             ${isDisabled ? 'cursor-not-allowed opacity-50' : ''}
           `;
 
-          // Obtenha as classes customizadas
-          const customClasses = tileClassName ? tileClassName({ date: day, view: 'month' }) : '';
-
           return (
-            <Popover key={dayIdx} className="relative">
-              {({ open }) => (
-                <>
-                  <Popover.Button
-                    disabled={isDisabled}
-                    className={`${baseClasses} group`}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      if (!isDisabled) {
-                        onChange(day);
-                      }
-                    }}
+            <div key={dayIdx} className="relative">
+              <button
+                disabled={isDisabled}
+                className={baseClasses}
+                onClick={(e) => {
+                  e.preventDefault();
+                  if (!isDisabled) {
+                    onChange(day);
+                  }
+                }}
+              >
+                <div className={tileClassName({ date: day, view: 'month' })}>
+                  <time
+                    dateTime={format(day, 'yyyy-MM-dd')}
+                    className={`
+                      relative z-10
+                      mx-auto flex h-8 w-8 items-center justify-center
+                      ${isDayToday ? 'font-bold text-blue-400' : ''}
+                      ${isSelected ? 'font-bold' : ''}
+                    `}
                   >
-                    <div className={`
-                      absolute inset-1 rounded-full transition-colors
-                      ${customClasses}
-                      group-hover:bg-gray-800
-                    `} />
-                    <time
-                      dateTime={format(day, 'yyyy-MM-dd')}
-                      className={`
-                        relative z-10
-                        mx-auto flex h-8 w-8 items-center justify-center
-                        ${isDayToday ? 'font-bold text-blue-400' : ''}
-                        ${isSelected ? 'font-bold' : ''}
-                      `}
-                    >
-                      {format(day, 'd')}
-                    </time>
-                  </Popover.Button>
+                    {format(day, 'd')}
+                  </time>
+                </div>
 
-                  {/* Só mostra o Popover se houver horários para mostrar */}
-                  {getHorariosForDate && (
-                    <Popover.Panel
-                      className={`
-                        absolute z-50 -top-2 left-1/2 -translate-y-full -translate-x-1/2
-                        bg-gray-800 text-gray-100 px-4 py-2 rounded-lg shadow-lg text-sm
-                        min-w-[200px]
-                      `}
-                    >
-                      <div className="font-medium">
-                        {format(day, "dd 'de' MMMM", { locale: ptBR })}
-                      </div>
-                      <div className="text-gray-300 mt-1">
-                        {getHorariosForDate(day)}
-                      </div>
-                      <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-full">
-                        <div className="border-8 border-transparent border-t-gray-800" />
-                      </div>
-                    </Popover.Panel>
-                  )}
-                </>
-              )}
-            </Popover>
+                {/* Tooltip */}
+                <div className="
+                  invisible group-hover:visible opacity-0 group-hover:opacity-100
+                  transition-all duration-200
+                  absolute z-50 bottom-full left-1/2 -translate-x-1/2 mb-2
+                  bg-gray-800 text-gray-100 px-4 py-2 rounded-lg shadow-lg text-sm
+                  min-w-[200px] pointer-events-none
+                ">
+                  <div className="font-medium">
+                    {format(day, "dd 'de' MMMM", { locale: ptBR })}
+                  </div>
+                  <div className="text-gray-300 mt-1">
+                    {getHorariosForDate(day)}
+                  </div>
+                  <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-full">
+                    <div className="border-8 border-transparent border-t-gray-800" />
+                  </div>
+                </div>
+              </button>
+            </div>
           );
         })}
       </div>
