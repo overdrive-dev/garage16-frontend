@@ -1,6 +1,7 @@
 import { Inter } from 'next/font/google'
 import './globals.css'
 import { AuthProvider } from '@/contexts/AuthContext'
+import { DisponibilidadeProvider } from '@/contexts/DisponibilidadeContext'
 import Header from '@/components/Header'
 
 const inter = Inter({ subsets: ['latin'] })
@@ -15,10 +16,12 @@ export default function RootLayout({ children }) {
     <html lang="pt-BR" className="h-full bg-gray-900">
       <body className={`${inter.className} h-full text-gray-100`}>
         <AuthProvider>
-          <Header />
-          <div className="min-h-screen">
-            {children}
-          </div>
+          <DisponibilidadeProvider>
+            <Header />
+            <div className="min-h-screen">
+              {children}
+            </div>
+          </DisponibilidadeProvider>
         </AuthProvider>
       </body>
     </html>
