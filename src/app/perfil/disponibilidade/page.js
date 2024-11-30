@@ -20,6 +20,7 @@ export default function DisponibilidadePage() {
 
   // Carrega configuração inicial e verifica se há rascunho
   useEffect(() => {
+    if (disponibilidade) {
       const draft = localStorage.getItem(STORAGE_KEY);
       if (draft) {
         const parsedDraft = JSON.parse(draft);
