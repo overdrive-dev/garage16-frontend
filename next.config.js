@@ -2,10 +2,13 @@
 const nextConfig = {
   images: {
     domains: [
-      'lh3.googleusercontent.com', // Para fotos do Google
-      'platform-lookaside.fbsbx.com', // Para fotos do Facebook
-      'placehold.co', // Para imagens de placeholder
+      'lh3.googleusercontent.com',
+      'platform-lookaside.fbsbx.com',
+      'placehold.co'
     ],
+    dangerouslyAllowSVG: true,
+    contentDispositionType: 'attachment',
+    contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
   },
   transpilePackages: ['react-calendar']
 }

@@ -130,7 +130,7 @@ export default function AnuncioForm({ tipo, anuncio, onSubmit, userId }) {
       await onSubmit(formData);
       setOriginalData(formData); // Atualiza dados originais após salvar
       setHasChanges(false);
-      router.push('/meus-anuncios');
+      router.push('/novo');
     } catch (error) {
       console.error('Erro ao salvar:', error);
     }

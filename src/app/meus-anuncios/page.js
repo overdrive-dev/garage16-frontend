@@ -148,14 +148,14 @@ export default function MeusAnuncios() {
   ];
 
   return (
-    <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <main className="w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-gray-100">Meus Anúncios</h1>
         <Link
-          href="/anuncio/novo"
+          href="/novo"
           className="bg-orange-500 text-white px-4 py-2 rounded-md hover:bg-orange-600 transition-colors"
         >
-          Novo Anúncio
+          Anunciar
         </Link>
       </div>
 
@@ -244,7 +244,7 @@ export default function MeusAnuncios() {
                         {(anuncio.status === STATUS_ANUNCIO.ATIVO || anuncio.status === STATUS_ANUNCIO.VENDIDO) && (
                           <div className="relative flex items-center">
                             <Link
-                              href={`/veiculo/${anuncio.id}`}
+                              href={`/${anuncio.id}`}
                               className="text-gray-400 hover:text-orange-400 transition-colors group flex items-center"
                             >
                               <EyeIcon className="h-5 w-5" />
@@ -259,7 +259,7 @@ export default function MeusAnuncios() {
                           <>
                             <div className="relative flex items-center">
                               <Link
-                                href={`/veiculo/${anuncio.id}/editar`}
+                                href={`/${anuncio.id}/editar`}
                                 className="text-gray-400 hover:text-orange-400 transition-colors group flex items-center"
                               >
                                 <PencilSquareIcon className="h-5 w-5" />
@@ -348,7 +348,7 @@ export default function MeusAnuncios() {
                   {(anuncio.status === STATUS_ANUNCIO.ATIVO || anuncio.status === STATUS_ANUNCIO.VENDIDO) && (
                     <div className="relative flex items-center">
                       <Link
-                        href={`/veiculo/${anuncio.id}`}
+                        href={`/${anuncio.id}`}
                         className="text-gray-400 hover:text-orange-400 transition-colors group flex items-center"
                       >
                         <EyeIcon className="h-5 w-5" />
@@ -363,7 +363,7 @@ export default function MeusAnuncios() {
                     <>
                       <div className="relative flex items-center">
                         <Link
-                          href={`/veiculo/${anuncio.id}/editar`}
+                          href={`/${anuncio.id}/editar`}
                           className="text-gray-400 hover:text-orange-400 transition-colors group flex items-center"
                         >
                           <PencilSquareIcon className="h-5 w-5" />
