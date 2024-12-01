@@ -116,7 +116,7 @@ export default function Header() {
                 </button>
 
                 {isProfileMenuOpen && (
-                  <div className="absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-gray-800 ring-1 ring-black ring-opacity-5 py-1">
+                  <div className="absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-gray-800 ring-1 ring-black ring-opacity-5 py-1 z-[100]">
                     <Link
                       href="/perfil/editar"
                       className="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 transition-colors"
