@@ -159,6 +159,15 @@ export default function DisponibilidadePage() {
     setHasUnsavedChanges(false);
   };
 
+  const handleCancel = () => {
+    // Reverte para a última versão salva
+    setCurrentConfig(disponibilidade);
+    // Remove o rascunho do localStorage
+    localStorage.removeItem(STORAGE_KEY);
+    // Reseta o estado de alterações não salvas
+    setHasUnsavedChanges(false);
+  };
+
   if (loading || !currentConfig) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -185,7 +194,7 @@ export default function DisponibilidadePage() {
               </span>
               <button
                 type="button"
-                onClick={handleNavigateAway}
+                onClick={handleCancel}
                 className="px-4 py-2 bg-gray-700 text-gray-200 rounded-md hover:bg-gray-600 transition-colors"
               >
                 Cancelar
@@ -341,7 +350,7 @@ export default function DisponibilidadePage() {
               <div className="flex justify-end space-x-4">
                 <button
                   type="button"
-                  onClick={handleNavigateAway}
+                  onClick={handleCancel}
                   className="px-4 py-2 bg-gray-700 text-gray-200 rounded-md hover:bg-gray-600 transition-colors"
                 >
                   Continuar editando

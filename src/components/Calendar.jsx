@@ -96,8 +96,8 @@ export default function Calendar({ selectedDate, onChange, disabledDates = [], g
                     dateTime={format(day, 'yyyy-MM-dd')}
                     className={`
                       relative z-10
-                      mx-auto flex h-8 w-8 items-center justify-center
-                      ${isDayToday ? 'font-bold text-blue-400' : ''}
+                      mx-auto flex h-full w-8 items-center justify-center
+                      ${isDayToday ? 'font-bold text-orange-400' : ''}
                       ${isSelected ? 'font-bold' : ''}
                     `}
                   >

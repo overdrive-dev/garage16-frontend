@@ -1,14 +1,27 @@
-import { anuncios } from '@/mocks/anuncios';
+import { mockAnuncios } from '@/mocks/anuncios';
+import { auth } from '@/services/firebase';
 
 export const anuncioService = {
-  async getAnuncios(filters = {}) {
+  async getAnuncio(id) {
     return new Promise((resolve) => {
       setTimeout(() => {
-        let filtered = [...anuncios];
-        if (filters.userId) {
-          filtered = filtered.filter(a => a.userId === filters.userId);
+        if (id === 'novo') {
+          resolve({
+            id: 'novo',
+            status: 'rascunho',
+          });
+        } else {
+          const anuncio = 
+            mockAnuncios.publicados.find(a => a.id === id) ||
+            mockAnuncios.rascunhos.find(a => a.id === id);
+            
+          if (anuncio) {
+            const userId = auth.currentUser?.uid || 'user123';
+            resolve({ ...anuncio, userId });
+          } else {
+            resolve(null);
+          }
         }
-        resolve(filtered);
       }, 500);
     });
   },
@@ -17,12 +30,25 @@ export const anuncioService = {
     return new Promise((resolve) => {
       setTimeout(() => {
         const newAnuncio = {
-          id: `anuncio${Date.now()}`,
           ...data,
+          id: `anuncio${Date.now()}`,
+          status: 'pendente',
           createdAt: new Date().toISOString()
         };
-        anuncios.push(newAnuncio);
+        mockAnuncios.publicados.push(newAnuncio);
         resolve(newAnuncio);
+      }, 500);
+    });
+  },
+
+  async updateAnuncio(id, data) {
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        const index = mockAnuncios.publicados.findIndex(a => a.id === id);
+        if (index >= 0) {
+          mockAnuncios.publicados[index] = { ...mockAnuncios.publicados[index], ...data };
+          resolve(mockAnuncios.publicados[index]);
+        }
       }, 500);
     });
   }

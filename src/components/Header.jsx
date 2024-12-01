@@ -86,7 +86,7 @@ export default function Header() {
           <div className="hidden md:flex items-center space-x-4">
             {user && (
               <Link 
-                href="/anunciar" 
+                href="/veiculo/novo"
                 className="bg-orange-500 text-white px-4 py-2 rounded-md hover:bg-orange-600 transition-colors"
               >
                 Anunciar Veículo
@@ -199,7 +199,10 @@ export default function Header() {
 
               {user && (
                 <>
-                  <Link href="/anunciar" className="bg-orange-500 text-white block px-3 py-2 rounded-md hover:bg-orange-600 transition-colors">
+                  <Link 
+                    href="/anuncio/novo"
+                    className="bg-orange-500 text-white block px-3 py-2 rounded-md hover:bg-orange-600 transition-colors"
+                  >
                     Anunciar Veículo
                   </Link>
                   <Link href="/perfil/editar" className="text-gray-300 hover:text-white block px-3 py-2 transition-colors">

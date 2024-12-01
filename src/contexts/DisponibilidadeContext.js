@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
+import { disponibilidadeService } from '@/services/disponibilidadeService';
 
 const DisponibilidadeContext = createContext({});
 
@@ -31,26 +32,17 @@ const disponibilidadePadrao = {
   }
 };
 
-// Mock de dados de disponibilidade
-const mockDisponibilidade = {
-  'user123': disponibilidadePadrao
-};
-
 export function DisponibilidadeProvider({ children }) {
   const { user } = useAuth();
   const [disponibilidade, setDisponibilidade] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Simula uma chamada à API
     const fetchDisponibilidade = async () => {
       try {
-        // Simula delay de rede
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
         if (user) {
-          // Usa os dados mockados
-          setDisponibilidade(mockDisponibilidade[user.uid] || disponibilidadePadrao);
+          const data = await disponibilidadeService.getDisponibilidade(user.uid);
+          setDisponibilidade(data || disponibilidadePadrao);
         }
       } catch (error) {
         console.error('Erro ao carregar disponibilidade:', error);
@@ -64,16 +56,13 @@ export function DisponibilidadeProvider({ children }) {
 
   const updateDisponibilidade = async (novaDisponibilidade) => {
     try {
-      // Simula delay de rede
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
       if (user) {
-        // Atualiza os dados mockados
-        mockDisponibilidade[user.uid] = novaDisponibilidade;
+        await disponibilidadeService.updateDisponibilidade(user.uid, novaDisponibilidade);
         setDisponibilidade(novaDisponibilidade);
       }
     } catch (error) {
       console.error('Erro ao atualizar disponibilidade:', error);
+      throw error;
     }
   };
 

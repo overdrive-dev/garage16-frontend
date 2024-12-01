@@ -4,8 +4,7 @@ const nextConfig = {
     domains: [
       'lh3.googleusercontent.com', // Para fotos do Google
       'platform-lookaside.fbsbx.com', // Para fotos do Facebook
-      'firebasestorage.googleapis.com', // Para imagens do Firebase Storage
-      'via.placeholder.com'
+      'placehold.co', // Para imagens de placeholder
     ],
   },
   transpilePackages: ['react-calendar']
