@@ -23,7 +23,6 @@ export default function UserAvatar({ user, size = 'md' }) {
       .toUpperCase();
   };
 
-  // Fallback para quando não há foto ou ocorre erro
   const FallbackAvatar = () => (
     <div 
       className={`${sizeClasses[size]} bg-gray-700 rounded-full flex items-center justify-center text-gray-300`}
@@ -32,7 +31,11 @@ export default function UserAvatar({ user, size = 'md' }) {
     </div>
   );
 
-  if (!user?.photoURL || imageError) {
+  if (!user?.photoURL) {
+    return <FallbackAvatar />;
+  }
+
+  if (imageError) {
     return <FallbackAvatar />;
   }
 
@@ -43,6 +46,7 @@ export default function UserAvatar({ user, size = 'md' }) {
         src={user.photoURL}
         alt={user.displayName || 'Avatar do usuário'}
         fill
+        sizes={`${parseInt(sizeClasses[size].match(/\d+/)[0]) * 16}px`}
         className={`object-cover transition-opacity duration-300 ${isLoading ? 'opacity-0' : 'opacity-100'}`}
         onLoadingComplete={() => setIsLoading(false)}
         onError={() => setImageError(true)}

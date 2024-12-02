@@ -5,13 +5,15 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 
-export default function LoginPage() {
+export default function CriarContaPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const router = useRouter();
-  const { user, login, loginWithGoogle } = useAuth();
+  const { user, register, loginWithGoogle } = useAuth();
 
+  // Redireciona se já estiver logado
   useEffect(() => {
     if (user) {
       router.push('/perfil');
@@ -20,11 +22,22 @@ export default function LoginPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (password !== confirmPassword) {
+      setError('As senhas não coincidem');
+      return;
+    }
     try {
-      await login(email, password);
+      await register(email, password);
       router.push('/');
     } catch (error) {
-      setError('Email ou senha inválidos');
+      if (error.code === 'auth/email-already-in-use') {
+        setError('Este email já está em uso. Tente fazer login.');
+        setTimeout(() => {
+          router.push('/login');
+        }, 2000);
+      } else {
+        setError('Erro ao criar conta. Tente novamente.');
+      }
     }
   };
 
@@ -33,7 +46,9 @@ export default function LoginPage() {
       await loginWithGoogle();
       router.push('/');
     } catch (error) {
-      if (!error.message.includes('cancelado')) {
+      if (error.message.includes('já existe')) {
+        router.push('/');
+      } else if (!error.message.includes('cancelado')) {
         setError(error.message);
       }
     }
@@ -44,7 +59,7 @@ export default function LoginPage() {
       <div className="max-w-md w-full space-y-8">
         <div>
           <h2 className="text-center text-3xl font-bold text-white">
-            Entrar
+            Criar Conta
           </h2>
         </div>
 
@@ -82,23 +97,26 @@ export default function LoginPage() {
               />
             </div>
 
-            <div className="flex items-center justify-between">
-              <div className="text-sm">
-                <Link 
-                  href="/recuperar-senha"
-                  className="text-orange-500 hover:text-orange-400"
-                >
-                  Esqueceu sua senha?
-                </Link>
-              </div>
-              <div className="text-sm">
-                <Link 
-                  href="/criar-conta"
-                  className="text-orange-500 hover:text-orange-400"
-                >
-                  Criar conta
-                </Link>
-              </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-200">
+                Confirmar Senha
+              </label>
+              <input
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-gray-100 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                required
+              />
+            </div>
+
+            <div className="text-sm text-center">
+              <Link 
+                href="/login"
+                className="text-orange-500 hover:text-orange-400"
+              >
+                Já tem uma conta? Faça login
+              </Link>
             </div>
 
             <div>
@@ -106,7 +124,7 @@ export default function LoginPage() {
                 type="submit"
                 className="w-full bg-orange-500 text-white py-2 px-4 rounded-md hover:bg-orange-600 transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 focus:ring-offset-gray-800"
               >
-                Entrar
+                Criar Conta
               </button>
             </div>
 

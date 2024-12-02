@@ -6,7 +6,8 @@ import {
   createUserWithEmailAndPassword,
   signOut,
   onAuthStateChanged,
-  signInWithPopup
+  signInWithPopup,
+  sendPasswordResetEmail
 } from 'firebase/auth';
 import { auth, googleProvider, facebookProvider } from '../config/firebase';
 
@@ -19,12 +20,15 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
-        setUser({
+        const normalizedUser = {
           uid: user.uid,
           email: user.email,
-          displayName: user.displayName,
-          photoURL: user.photoURL
-        });
+          displayName: user.displayName || user.email?.split('@')[0],
+          photoURL: user.photoURL,
+          providerId: user.providerId,
+          providerData: user.providerData
+        };
+        setUser(normalizedUser);
       } else {
         setUser(null);
       }
@@ -42,8 +46,20 @@ export function AuthProvider({ children }) {
     return createUserWithEmailAndPassword(auth, email, password);
   };
 
-  const loginWithGoogle = () => {
-    return signInWithPopup(auth, googleProvider);
+  const loginWithGoogle = async () => {
+    try {
+      const result = await signInWithPopup(auth, googleProvider);
+      return result;
+    } catch (error) {
+      if (error.code === 'auth/account-exists-with-different-credential') {
+        throw new Error('Esta conta já existe. Por favor, faça login com o método original.');
+      } else if (error.code === 'auth/popup-closed-by-user' || error.code === 'auth/cancelled-popup-request') {
+        throw new Error('Login cancelado pelo usuário.');
+      } else {
+        console.error('Erro no login com Google:', error);
+        throw new Error('Erro ao fazer login com Google. Tente novamente.');
+      }
+    }
   };
 
   const loginWithFacebook = () => {
@@ -54,6 +70,10 @@ export function AuthProvider({ children }) {
     return signOut(auth);
   };
 
+  const resetPassword = (email) => {
+    return sendPasswordResetEmail(auth, email);
+  };
+
   return (
     <AuthContext.Provider value={{
       user,
@@ -61,7 +81,8 @@ export function AuthProvider({ children }) {
       register,
       loginWithGoogle,
       loginWithFacebook,
-      logout
+      logout,
+      resetPassword
     }}>
       {!loading && children}
     </AuthContext.Provider>
