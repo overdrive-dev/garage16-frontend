@@ -62,7 +62,7 @@ export default function VeiculosPage() {
 
   return (
     <main className="min-h-screen bg-gray-900">
-      <div className="w-full mx-auto">
+      <div className="w-full mx-auto px-4 sm:px-6 lg:px-8">
         <Breadcrumb items={breadcrumbItems} />
 
         <div className="flex gap-8 p-6">
