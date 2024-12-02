@@ -3,6 +3,8 @@ import './globals.css'
 import { AuthProvider } from '@/contexts/AuthContext'
 import { DisponibilidadeProvider } from '@/contexts/DisponibilidadeContext'
 import Header from '@/components/Header'
+import Footer from '@/components/Footer'
+import AnnouncementBar from '@/components/AnnouncementBar'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -17,10 +19,12 @@ export default function RootLayout({ children }) {
       <body className={`${inter.className} h-full text-gray-100`}>
         <AuthProvider>
           <DisponibilidadeProvider>
+            <AnnouncementBar />
             <Header />
             <div className="min-h-screen">
               {children}
             </div>
+            <Footer />
           </DisponibilidadeProvider>
         </AuthProvider>
       </body>

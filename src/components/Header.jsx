@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { 
   Bars3Icon, 
   XMarkIcon, 
@@ -14,6 +14,7 @@ import UserAvatar from './UserAvatar';
 
 export default function Header() {
   const router = useRouter();
+  const pathname = usePathname();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
@@ -48,6 +49,12 @@ export default function Header() {
     }
     // Se não tiver displayName, usa a parte antes do @ do email
     return user.email.split('@')[0];
+  };
+
+  // Função para verificar se um link está ativo
+  const isLinkActive = (href) => {
+    if (href === '/') return pathname === '/';
+    return pathname.startsWith(href);
   };
 
   return (
@@ -87,14 +94,20 @@ export default function Header() {
             <div className="hidden md:flex items-center space-x-4">
               <Link 
                 href="/veiculos" 
-                className="text-gray-300 hover:text-white px-3 py-2 transition-colors"
+                className={`px-3 py-2 transition-colors ${
+                  isLinkActive('/veiculos')
+                    ? 'text-white'
+                    : 'text-gray-300 hover:text-white'
+                }`}
               >
                 Veículos
               </Link>
               {user && (
                 <Link 
                   href="/veiculo/novo"
-                  className="bg-orange-500 text-white px-4 py-2 rounded-md hover:bg-orange-600 transition-colors"
+                  className={`bg-orange-500 text-white px-4 py-2 rounded-md hover:bg-orange-600 transition-colors ${
+                    isLinkActive('/veiculo/novo') ? 'bg-orange-600' : ''
+                  }`}
                 >
                   Anunciar
                 </Link>
@@ -102,10 +115,24 @@ export default function Header() {
               
               {isAdmin && (
                 <>
-                  <Link href="/admin/anuncios" className="text-orange-500 hover:text-orange-400 px-3 py-2 transition-colors">
+                  <Link 
+                    href="/admin/anuncios" 
+                    className={`px-3 py-2 transition-colors ${
+                      isLinkActive('/admin/anuncios')
+                        ? 'text-orange-400'
+                        : 'text-orange-500 hover:text-orange-400'
+                    }`}
+                  >
                     Admin: Anúncios
                   </Link>
-                  <Link href="/admin/agendamentos" className="text-orange-500 hover:text-orange-400 px-3 py-2 transition-colors">
+                  <Link 
+                    href="/admin/agendamentos"
+                    className={`px-3 py-2 transition-colors ${
+                      isLinkActive('/admin/agendamentos')
+                        ? 'text-orange-400'
+                        : 'text-orange-500 hover:text-orange-400'
+                    }`}
+                  >
                     Admin: Agendamentos
                   </Link>
                 </>
@@ -208,17 +235,30 @@ export default function Header() {
                   <>
                     <Link 
                       href="/veiculo/novo"
-                      className="bg-orange-500 text-white block px-3 py-2 rounded-md hover:bg-orange-600 transition-colors"
+                      className={`bg-orange-500 text-white block px-3 py-2 rounded-md hover:bg-orange-600 transition-colors ${
+                        isLinkActive('/veiculo/novo') ? 'bg-orange-600' : ''
+                      }`}
                     >
                       Anunciar
                     </Link>
                     <Link 
                       href="/veiculos"
-                      className="text-gray-300 hover:text-white block px-3 py-2 transition-colors"
+                      className={`block px-3 py-2 transition-colors ${
+                        isLinkActive('/veiculos')
+                          ? 'text-white'
+                          : 'text-gray-300 hover:text-white'
+                      }`}
                     >
                       Veículos
                     </Link>
-                    <Link href="/perfil" className="text-gray-300 hover:text-white block px-3 py-2 transition-colors">
+                    <Link 
+                      href="/perfil" 
+                      className={`block px-3 py-2 transition-colors ${
+                        isLinkActive('/perfil')
+                          ? 'text-white'
+                          : 'text-gray-300 hover:text-white'
+                      }`}
+                    >
                       Perfil
                     </Link>
                     <Link href="/meus-anuncios" className="text-gray-300 hover:text-white block px-3 py-2 transition-colors">
