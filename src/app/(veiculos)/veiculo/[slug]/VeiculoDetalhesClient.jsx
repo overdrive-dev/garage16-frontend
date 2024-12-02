@@ -1,24 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Image from 'next/image';
-import { mockAnuncios } from '@/mocks/anuncios';
 import Breadcrumb from '@/components/Breadcrumb';
 
-export default function VeiculoDetalhesClient({ id }) {
-  const [veiculo, setVeiculo] = useState(null);
+export default function VeiculoDetalhesClient({ veiculo }) {
   const [selectedImage, setSelectedImage] = useState(0);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const veiculoEncontrado = mockAnuncios.publicados.find(v => v.id === id);
-    setVeiculo(veiculoEncontrado);
-    setLoading(false);
-  }, [id]);
-
-  if (loading || !veiculo) {
-    return <div>Carregando...</div>;
-  }
 
   const breadcrumbItems = [
     { label: 'Home', href: '/' },
@@ -96,9 +83,7 @@ export default function VeiculoDetalhesClient({ id }) {
             <div>
               <h2 className="text-lg font-semibold text-white mb-2">Descrição</h2>
               <p className="text-gray-300">
-                Nulla pulvinar, sapien vitae cursus pretium, ex erat convallis eros, quis viverra mi arcu sit amet est. 
-                Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos. 
-                Integer convallis sapien placerat tellus accumsan dignissim.
+                {veiculo.descricao || 'Nulla pulvinar, sapien vitae cursus pretium, ex erat convallis eros, quis viverra mi arcu sit amet est. Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos. Integer convallis sapien placerat tellus accumsan dignissim.'}
               </p>
             </div>
 
@@ -118,11 +103,11 @@ export default function VeiculoDetalhesClient({ id }) {
               </div>
               <div>
                 <p className="text-sm text-gray-400">Cor</p>
-                <p className="text-gray-200">Chumbo</p>
+                <p className="text-gray-200">{veiculo.cor || 'Não informada'}</p>
               </div>
               <div>
                 <p className="text-sm text-gray-400">Km</p>
-                <p className="text-gray-200">16k</p>
+                <p className="text-gray-200">{veiculo.km || 'Não informada'}</p>
               </div>
             </div>
 

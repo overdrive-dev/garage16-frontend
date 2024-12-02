@@ -52,7 +52,7 @@ export default function Header() {
 
   return (
     <header className="bg-gray-900">
-      <div className="w-full mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="w-full mx-auto px-4 sm:px-6 lg:px-6">
         <nav className="w-full mx-auto">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">

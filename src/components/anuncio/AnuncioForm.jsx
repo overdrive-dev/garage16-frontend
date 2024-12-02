@@ -17,8 +17,20 @@ const anuncioPadrao = {
 
 export default function AnuncioForm({ tipo, anuncio, onSubmit, userId }) {
   const router = useRouter();
-  const [formData, setFormData] = useState(anuncio || anuncioPadrao);
-  const [originalData, setOriginalData] = useState(anuncio || anuncioPadrao);
+  const anuncioNormalizado = {
+    ...anuncioPadrao,
+    ...anuncio,
+    marca: anuncio?.marca || '',
+    modelo: anuncio?.modelo || '',
+    ano: anuncio?.ano || '',
+    preco: anuncio?.preco || '',
+    imagens: anuncio?.imagens || [],
+    cor: anuncio?.cor || '',
+    km: anuncio?.km || '',
+    descricao: anuncio?.descricao || ''
+  };
+  const [formData, setFormData] = useState(anuncioNormalizado);
+  const [originalData, setOriginalData] = useState(anuncioNormalizado);
   const [hasChanges, setHasChanges] = useState(false);
   const [saving, setSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState(null);
@@ -28,6 +40,24 @@ export default function AnuncioForm({ tipo, anuncio, onSubmit, userId }) {
     'https://placehold.co/800x600/1f2937/ffffff?text=Foto+3',
     'https://placehold.co/800x600/1f2937/ffffff?text=Foto+4'
   ]);
+
+  // Verifica se é um rascunho pelo ID
+  const isRascunho = anuncio?.id === '16'; // ID do rascunho no mock
+
+  // Ajusta o título baseado no tipo e se é rascunho
+  const getFormTitle = () => {
+    if (tipo === 'rascunho') return 'Continuar Rascunho';
+    if (tipo === 'novo') return 'Novo Anúncio';
+    return 'Editar Anúncio';
+  };
+
+  // Ajusta o texto do botão
+  const getSubmitButtonText = () => {
+    if (saving) return 'Salvando...';
+    if (tipo === 'rascunho') return 'Publicar Anúncio';
+    if (tipo === 'novo') return 'Publicar Anúncio';
+    return 'Salvar Alterações';
+  };
 
   // Verifica se houve alterações
   useEffect(() => {
@@ -127,10 +157,26 @@ export default function AnuncioForm({ tipo, anuncio, onSubmit, userId }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await onSubmit(formData);
-      setOriginalData(formData); // Atualiza dados originais após salvar
+      // Gerar slug manualmente
+      const slug = `${formData.marca}-${formData.modelo}-${formData.ano}`
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^\w\s-]/g, '')
+        .replace(/\s+/g, '-')
+        .replace(/-+/g, '-')
+        .trim();
+      
+      // Adicionar slug aos dados
+      const anuncioData = {
+        ...formData,
+        slug
+      };
+
+      await onSubmit(anuncioData);
+      setOriginalData(anuncioData); // Atualiza dados originais após salvar
       setHasChanges(false);
-      router.push('/meus-anuncios');
+      router.push(`/veiculo/${anuncioData.slug}`);
     } catch (error) {
       console.error('Erro ao salvar:', error);
     }
@@ -153,7 +199,7 @@ export default function AnuncioForm({ tipo, anuncio, onSubmit, userId }) {
         <div className="md:flex md:items-center md:justify-between">
           <div className="min-w-0 flex-1">
             <h2 className="text-2xl font-bold leading-7 text-gray-100 sm:truncate sm:text-3xl sm:tracking-tight">
-              {tipo === 'novo' ? 'Novo Anúncio' : 'Editar Anúncio'}
+              {getFormTitle()}
             </h2>
           </div>
           
@@ -299,7 +345,7 @@ export default function AnuncioForm({ tipo, anuncio, onSubmit, userId }) {
                   ? 'bg-orange-500 text-white hover:bg-orange-600' 
                   : 'bg-gray-600 text-gray-400 cursor-not-allowed'}`}
             >
-              {tipo === 'novo' ? 'Publicar Anúncio' : 'Salvar Alterações'}
+              {getSubmitButtonText()}
             </button>
           </div>
         </form>

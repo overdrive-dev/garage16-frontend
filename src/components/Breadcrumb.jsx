@@ -5,7 +5,7 @@ import { ChevronRightIcon } from '@heroicons/react/24/outline';
 
 export default function Breadcrumb({ items }) {
   return (
-    <div className="flex items-center p-4 text-sm">
+    <div className="flex items-center p-6 text-sm">
       {items.map((item, index) => (
         <div key={item.href || index} className="flex items-center">
           {index > 0 && (

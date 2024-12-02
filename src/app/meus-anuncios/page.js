@@ -254,7 +254,7 @@ export default function MeusAnuncios() {
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-right">
                         <div className="flex items-center justify-end space-x-4">
                           <Link
-                            href={`/${anuncio.id}/editar`}
+                            href={`/veiculos/rascunho/${anuncio.id}/editar`}
                             className="text-gray-400 hover:text-orange-400 transition-colors"
                           >
                             <PencilSquareIcon className="h-5 w-5" />
@@ -293,7 +293,7 @@ export default function MeusAnuncios() {
         </nav>
       </div>
 
-      {/* Lista de Anúncios */}
+      {/* Lista de Anncios */}
       <div className="bg-gray-800 rounded-xl shadow-lg border border-gray-700 overflow-hidden">
         {/* Tabela para Desktop */}
         <div className="hidden md:block">
@@ -369,7 +369,7 @@ export default function MeusAnuncios() {
                         {(anuncio.status === STATUS_ANUNCIO.VENDENDO || anuncio.status === STATUS_ANUNCIO.VENDIDO) && (
                           <div className="relative flex items-center">
                             <Link
-                              href={`/veiculo/${anuncio.id}`}
+                              href={`/veiculo/${anuncio.slug}`}
                               className="text-gray-400 hover:text-orange-400 transition-colors group flex items-center"
                             >
                               <EyeIcon className="h-5 w-5" />
@@ -384,12 +384,12 @@ export default function MeusAnuncios() {
                           <>
                             <div className="relative flex items-center">
                               <Link
-                                href={`/veiculo/${anuncio.id}/editar`}
+                                href={`/veiculo/${anuncio.slug}/editar`}
                                 className="text-gray-400 hover:text-orange-400 transition-colors group flex items-center"
                               >
                                 <PencilSquareIcon className="h-5 w-5" />
                                 <span className="pointer-events-none absolute right-full mr-2 top-1/2 -translate-y-1/2 px-2 py-1 text-xs text-gray-100 bg-gray-900 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-[100]">
-                                  {anuncio.status === STATUS_ANUNCIO.RASCUNHO ? 'Continuar' : 'Editar'}
+                                  Editar
                                 </span>
                               </Link>
                             </div>
@@ -473,7 +473,7 @@ export default function MeusAnuncios() {
                   {(anuncio.status === STATUS_ANUNCIO.VENDENDO || anuncio.status === STATUS_ANUNCIO.VENDIDO) && (
                     <div className="relative flex items-center">
                       <Link
-                        href={`/veiculo/${anuncio.id}`}
+                        href={`/veiculo/${anuncio.slug}`}
                         className="text-gray-400 hover:text-orange-400 transition-colors group flex items-center"
                       >
                         <EyeIcon className="h-5 w-5" />
@@ -488,12 +488,12 @@ export default function MeusAnuncios() {
                     <>
                       <div className="relative flex items-center">
                         <Link
-                          href={`/veiculo/${anuncio.id}/editar`}
+                          href={`/veiculo/${anuncio.slug}/editar`}
                           className="text-gray-400 hover:text-orange-400 transition-colors group flex items-center"
                         >
                           <PencilSquareIcon className="h-5 w-5" />
                           <span className="pointer-events-none absolute right-full mr-2 top-1/2 -translate-y-1/2 px-2 py-1 text-xs text-gray-100 bg-gray-900 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-[100]">
-                            {anuncio.status === STATUS_ANUNCIO.RASCUNHO ? 'Continuar' : 'Editar'}
+                            Editar
                           </span>
                         </Link>
                       </div>
