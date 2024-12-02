@@ -1,1 +1,0 @@
-// Mover todo o conteúdo atual de src/app/veiculo/[id]/editar/EditarVeiculoClient.jsx 

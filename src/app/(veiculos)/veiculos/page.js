@@ -1,1 +1,0 @@
-// Mover o conteúdo de src/app/veiculos/page.js para aqui

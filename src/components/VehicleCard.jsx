@@ -5,7 +5,7 @@ import Link from 'next/link';
 
 export default function VehicleCard({ veiculo }) {
   return (
-    <Link href={`/${veiculo.id}`} className="group">
+    <Link href={`/veiculo/${veiculo.id}`} className="group">
       <div className="relative aspect-[4/3] overflow-hidden rounded-lg">
         <Image
           src={veiculo.imageUrl}
