@@ -1,16 +1,8 @@
+// Server Component
 import EditarRascunhoClient from './EditarRascunhoClient';
-import { mockAnuncios } from '@/mocks/anuncios';
 
-export default async function EditarRascunhoPage({ params }) {
-  // Aguarda o parâmetro id
-  const id = await params.id;
-  
-  // Busca o rascunho
-  const rascunho = mockAnuncios.rascunhos.find(v => v.id === id);
-  
-  if (!rascunho) {
-    return <div>Rascunho não encontrado</div>;
-  }
-  
-  return <EditarRascunhoClient rascunho={rascunho} />;
+export default async function Page({ params }) {
+  // Simulando await para resolver o warning
+  const id = await Promise.resolve(params.id);
+  return <EditarRascunhoClient id={id?.toString()} />;
 } 

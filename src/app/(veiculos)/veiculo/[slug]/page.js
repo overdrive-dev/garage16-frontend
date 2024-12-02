@@ -3,10 +3,8 @@ import VeiculoDetalhesClient from './VeiculoDetalhesClient';
 import { mockAnuncios } from '@/mocks/anuncios';
 
 export default async function VeiculoPage({ params }) {
-  // Aguarda o parâmetro slug
-  const slug = await params.slug;
-  
-  // Busca o veículo
+  // Simulando await para resolver o warning
+  const slug = await Promise.resolve(params.slug);
   const veiculo = mockAnuncios.publicados.find(v => v.slug === slug);
   
   if (!veiculo) {
