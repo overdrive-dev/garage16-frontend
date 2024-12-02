@@ -4,7 +4,11 @@ const nextConfig = {
     domains: [
       'lh3.googleusercontent.com',
       'platform-lookaside.fbsbx.com',
-      'placehold.co'
+      'placehold.co',
+      'images.unsplash.com',
+      'images.pexels.com',
+      'cdn.pixabay.com',
+      'img.freepik.com'
     ],
     dangerouslyAllowSVG: true,
     contentDispositionType: 'attachment',
@@ -13,4 +17,4 @@ const nextConfig = {
   transpilePackages: ['react-calendar']
 }
 
-module.exports = nextConfig 
+module.exports = nextConfig

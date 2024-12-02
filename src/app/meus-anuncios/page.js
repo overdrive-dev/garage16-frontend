@@ -9,7 +9,8 @@ import {
   EyeIcon, 
   PencilSquareIcon, 
   XCircleIcon, 
-  CheckCircleIcon 
+  CheckCircleIcon,
+  PhotoIcon
 } from '@heroicons/react/24/outline';
 import { Dialog } from '@headlessui/react';
 
@@ -27,10 +28,7 @@ const FilterButton = ({ label, value, selected, onClick }) => (
 );
 
 export default function MeusAnuncios() {
-  const [anuncios, setAnuncios] = useState([
-    ...mockAnuncios.rascunhos,
-    ...mockAnuncios.publicados
-  ]);
+  const [anuncios, setAnuncios] = useState(mockAnuncios.publicados);
   const [statusFiltro, setStatusFiltro] = useState('todos');
   const [deleteModal, setDeleteModal] = useState({
     isOpen: false,
@@ -44,6 +42,11 @@ export default function MeusAnuncios() {
     isOpen: false,
     anuncioId: null
   });
+  const [ordenacao, setOrdenacao] = useState({
+    campo: 'createdAt',
+    direcao: 'desc'
+  });
+  const [rascunhos, setRascunhos] = useState(mockAnuncios.rascunhos);
 
   const motivosCancelamento = [
     'Veículo vendido em outro canal',
@@ -55,16 +58,16 @@ export default function MeusAnuncios() {
 
   const getStatusBadgeClass = (status) => {
     switch (status) {
-      case STATUS_ANUNCIO.ATIVO:
-        return 'bg-green-900 text-green-300';
+      case STATUS_ANUNCIO.VENDENDO:
+        return 'bg-orange-900 text-orange-300';
       case STATUS_ANUNCIO.REVISAO:
         return 'bg-yellow-900 text-yellow-300';
       case STATUS_ANUNCIO.RASCUNHO:
         return 'bg-gray-900 text-gray-300';
-      case STATUS_ANUNCIO.REPROVADO:
-        return 'bg-red-900 text-red-300';
+      case STATUS_ANUNCIO.CANCELADO:
+        return 'bg-gray-900 text-gray-300';
       case STATUS_ANUNCIO.VENDIDO:
-        return 'bg-blue-900 text-blue-300';
+        return 'bg-green-900 text-green-300';
       default:
         return 'bg-gray-900 text-gray-300';
     }
@@ -72,18 +75,18 @@ export default function MeusAnuncios() {
 
   const getStatusLabel = (status) => {
     switch (status) {
-      case STATUS_ANUNCIO.ATIVO:
-        return 'Ativo';
+      case STATUS_ANUNCIO.VENDENDO:
+        return 'Vendendo';
       case STATUS_ANUNCIO.REVISAO:
-        return 'Em Revisão';
+        return 'Aguardando Revisão';
       case STATUS_ANUNCIO.RASCUNHO:
         return 'Rascunho';
-      case STATUS_ANUNCIO.REPROVADO:
-        return 'Reprovado';
+      case STATUS_ANUNCIO.CANCELADO:
+        return 'Cancelado';
       case STATUS_ANUNCIO.VENDIDO:
         return 'Vendido';
       default:
-        return status;
+        return status.charAt(0).toUpperCase() + status.slice(1);
     }
   };
 
@@ -100,9 +103,16 @@ export default function MeusAnuncios() {
 
   const confirmDelete = async () => {
     try {
-      // Implementar lógica de exclusão
-      console.log('Excluindo anúncio:', deleteModal.anuncioId);
-      setAnuncios(prev => prev.filter(a => a.id !== deleteModal.anuncioId));
+      // Remove do estado local
+      if (mockAnuncios.rascunhos.find(r => r.id === deleteModal.anuncioId)) {
+        // Se for um rascunho
+        setRascunhos(prev => prev.filter(r => r.id !== deleteModal.anuncioId));
+        // Atualiza também no mock
+        mockAnuncios.rascunhos = mockAnuncios.rascunhos.filter(r => r.id !== deleteModal.anuncioId);
+      } else {
+        // Se for um anúncio publicado
+        setAnuncios(prev => prev.filter(a => a.id !== deleteModal.anuncioId));
+      }
     } catch (error) {
       console.error('Erro ao excluir:', error);
     } finally {
@@ -141,36 +151,145 @@ export default function MeusAnuncios() {
   const filtros = [
     { label: 'Todos', value: 'todos' },
     { label: 'Rascunhos', value: STATUS_ANUNCIO.RASCUNHO },
-    { label: 'Em Revisão', value: STATUS_ANUNCIO.REVISAO },
-    { label: 'Ativos', value: STATUS_ANUNCIO.ATIVO },
-    { label: 'Reprovados', value: STATUS_ANUNCIO.REPROVADO },
+    { label: 'Aguardando Revisão', value: STATUS_ANUNCIO.REVISAO },
+    { label: 'Vendendo', value: STATUS_ANUNCIO.VENDENDO },
+    { label: 'Cancelados', value: STATUS_ANUNCIO.CANCELADO },
     { label: 'Vendidos', value: STATUS_ANUNCIO.VENDIDO }
   ];
+
+  const formatDateTime = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  const handleSort = (campo) => {
+    setOrdenacao(prev => ({
+      campo,
+      direcao: prev.campo === campo && prev.direcao === 'asc' ? 'desc' : 'asc'
+    }));
+  };
+
+  const anunciosOrdenados = [...anunciosFiltrados].sort((a, b) => {
+    const direcao = ordenacao.direcao === 'asc' ? 1 : -1;
+    switch (ordenacao.campo) {
+      case 'modelo':
+        return (a.modelo || '').localeCompare(b.modelo || '') * direcao;
+      case 'marca':
+        return (a.marca || '').localeCompare(b.marca || '') * direcao;
+      case 'preco':
+        return (a.preco - b.preco) * direcao;
+      case 'createdAt':
+        return (new Date(a.createdAt) - new Date(b.createdAt)) * direcao;
+      case 'status':
+        return (a.status || '').localeCompare(b.status || '') * direcao;
+      default:
+        return 0;
+    }
+  });
+
+  const SortButton = ({ children, campo }) => (
+    <button
+      onClick={() => handleSort(campo)}
+      className="group flex items-center space-x-1"
+    >
+      <span>{children}</span>
+      <span className={`transition-colors ${ordenacao.campo === campo ? 'text-orange-500' : 'text-gray-600 group-hover:text-gray-400'}`}>
+        {ordenacao.campo === campo ? (
+          ordenacao.direcao === 'asc' ? '↑' : '↓'
+        ) : '↕'}
+      </span>
+    </button>
+  );
 
   return (
     <main className="w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-gray-100">Meus Anúncios</h1>
-        <Link
-          href="/veiculo/novo"
-          className="bg-orange-500 text-white px-4 py-2 rounded-md hover:bg-orange-600 transition-colors"
-        >
-          Anunciar
-        </Link>
       </div>
+
+      {/* Seção de Rascunhos */}
+      {rascunhos?.length > 0 && rascunhos.some(r => r.status === STATUS_ANUNCIO.RASCUNHO) && (
+        <div className="mb-8">
+          <h2 className="text-lg font-medium text-gray-200 mb-4 sr-only">Rascunhos</h2>
+          <div className="bg-gray-800 rounded-xl shadow-lg border border-gray-700 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-700">
+                <thead className="bg-gray-900">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase">
+                      Veículo
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase">
+                      Última Atualização
+                    </th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-400 uppercase">
+                      Ações
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-gray-800 divide-y divide-gray-700">
+                  {rascunhos.map((anuncio) => (
+                    <tr key={anuncio.id} className="hover:bg-gray-700">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center">
+                          <div className="h-10 w-10 relative flex-shrink-0 bg-gray-700 rounded-full flex items-center justify-center">
+                            <PhotoIcon className="h-6 w-6 text-gray-500" />
+                          </div>
+                          <div className="ml-4">
+                            <div className="text-sm font-medium text-gray-100">
+                              {anuncio.modelo || 'Novo Anúncio'}
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
+                        {formatDateTime(anuncio.updatedAt)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-right">
+                        <div className="flex items-center justify-end space-x-4">
+                          <Link
+                            href={`/${anuncio.id}/editar`}
+                            className="text-gray-400 hover:text-orange-400 transition-colors"
+                          >
+                            <PencilSquareIcon className="h-5 w-5" />
+                          </Link>
+                          <button
+                            onClick={() => handleDelete(anuncio.id)}
+                            className="text-gray-400 hover:text-red-400 transition-colors"
+                          >
+                            <XCircleIcon className="h-5 w-5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Filtro de Status */}
       <div className="mb-6">
         <nav className="flex space-x-4">
-          {filtros.map(filtro => (
-            <FilterButton
-              key={filtro.value}
-              label={filtro.label}
-              value={filtro.value}
-              selected={statusFiltro}
-              onClick={setStatusFiltro}
-            />
-          ))}
+          {filtros
+            .filter(f => f.value !== STATUS_ANUNCIO.RASCUNHO)
+            .map(filtro => (
+              <FilterButton
+                key={filtro.value}
+                label={filtro.label}
+                value={filtro.value}
+                selected={statusFiltro}
+                onClick={setStatusFiltro}
+              />
+            ))}
         </nav>
       </div>
 
@@ -183,16 +302,19 @@ export default function MeusAnuncios() {
               <thead className="bg-gray-900">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase">
-                    Veículo
+                    <SortButton campo="modelo">Veículo</SortButton>
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase">
-                    Ano
+                    <SortButton campo="marca">Marca</SortButton>
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase">
-                    Preço
+                    <SortButton campo="preco">Preço</SortButton>
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase">
-                    Status
+                    <SortButton campo="createdAt">Data Cadastro</SortButton>
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase">
+                    <SortButton campo="status">Status</SortButton>
                   </th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-400 uppercase">
                     Ações
@@ -200,12 +322,12 @@ export default function MeusAnuncios() {
                 </tr>
               </thead>
               <tbody className="bg-gray-800 divide-y divide-gray-700">
-                {anunciosFiltrados.map((anuncio, index) => (
+                {anunciosOrdenados.map((anuncio, index) => (
                   <tr key={anuncio.id} className={`hover:bg-gray-700 ${
-                    index === anunciosFiltrados.length - 1 ? 'last:rounded-b-xl' : ''
+                    index === anunciosOrdenados.length - 1 ? 'last:rounded-b-xl' : ''
                   }`}>
                     <td className={`px-6 py-4 whitespace-nowrap ${
-                      index === anunciosFiltrados.length - 1 ? 'first:rounded-bl-xl' : ''
+                      index === anunciosOrdenados.length - 1 ? 'first:rounded-bl-xl' : ''
                     }`}>
                       <div className="flex items-center">
                         <div className="h-10 w-10 relative flex-shrink-0">
@@ -224,7 +346,7 @@ export default function MeusAnuncios() {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
-                      {anuncio.ano}
+                      {anuncio.marca}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
                       {new Intl.NumberFormat('pt-BR', {
@@ -232,16 +354,19 @@ export default function MeusAnuncios() {
                         currency: 'BRL'
                       }).format(anuncio.preco)}
                     </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
+                      {formatDateTime(anuncio.createdAt)}
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusBadgeClass(anuncio.status)}`}>
                         {getStatusLabel(anuncio.status)}
                       </span>
                     </td>
                     <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium text-right ${
-                      index === anunciosFiltrados.length - 1 ? 'last:rounded-br-xl' : ''
+                      index === anunciosOrdenados.length - 1 ? 'last:rounded-br-xl' : ''
                     }`}>
                       <div className="flex items-center justify-end space-x-4">
-                        {(anuncio.status === STATUS_ANUNCIO.ATIVO || anuncio.status === STATUS_ANUNCIO.VENDIDO) && (
+                        {(anuncio.status === STATUS_ANUNCIO.VENDENDO || anuncio.status === STATUS_ANUNCIO.VENDIDO) && (
                           <div className="relative flex items-center">
                             <Link
                               href={`/veiculo/${anuncio.id}`}
@@ -269,11 +394,11 @@ export default function MeusAnuncios() {
                               </Link>
                             </div>
                             
-                            {anuncio.status === STATUS_ANUNCIO.ATIVO && (
+                            {anuncio.status === STATUS_ANUNCIO.VENDENDO && (
                               <div className="relative flex items-center">
                                 <button 
                                   onClick={() => handleMarcarVendido(anuncio.id)}
-                                  className="text-gray-400 hover:text-orange-400 transition-colors group flex items-center"
+                                  className="text-gray-400 hover:text-green-400 transition-colors group flex items-center"
                                 >
                                   <CheckCircleIcon className="h-5 w-5" />
                                   <span className="pointer-events-none absolute right-full mr-2 top-1/2 -translate-y-1/2 px-2 py-1 text-xs text-gray-100 bg-gray-900 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-[100]">
@@ -307,11 +432,11 @@ export default function MeusAnuncios() {
 
         {/* Cards para Mobile */}
         <div className="md:hidden divide-y divide-gray-700">
-          {anunciosFiltrados.map((anuncio, index) => (
+          {anunciosOrdenados.map((anuncio, index) => (
             <div key={anuncio.id} className={`p-4 space-y-4 ${
               index === 0 ? 'first:rounded-t-xl' : ''
             } ${
-              index === anunciosFiltrados.length - 1 ? 'last:rounded-b-xl' : ''
+              index === anunciosOrdenados.length - 1 ? 'last:rounded-b-xl' : ''
             }`}>
               <div className="flex items-center space-x-4">
                 <div className="h-12 w-12 relative flex-shrink-0">
@@ -327,7 +452,7 @@ export default function MeusAnuncios() {
                     {anuncio.modelo}
                   </div>
                   <div className="text-sm text-gray-400">
-                    {anuncio.ano}
+                    {anuncio.marca}
                   </div>
                 </div>
                 <div className="text-sm text-gray-400">
@@ -345,7 +470,7 @@ export default function MeusAnuncios() {
 
                 <div className="flex items-center space-x-4">
                   {/* Botões de ação */}
-                  {(anuncio.status === STATUS_ANUNCIO.ATIVO || anuncio.status === STATUS_ANUNCIO.VENDIDO) && (
+                  {(anuncio.status === STATUS_ANUNCIO.VENDENDO || anuncio.status === STATUS_ANUNCIO.VENDIDO) && (
                     <div className="relative flex items-center">
                       <Link
                         href={`/veiculo/${anuncio.id}`}
@@ -373,11 +498,11 @@ export default function MeusAnuncios() {
                         </Link>
                       </div>
                       
-                      {anuncio.status === STATUS_ANUNCIO.ATIVO && (
+                      {anuncio.status === STATUS_ANUNCIO.VENDENDO && (
                         <div className="relative flex items-center">
                           <button 
                             onClick={() => handleMarcarVendido(anuncio.id)}
-                            className="text-gray-400 hover:text-orange-400 transition-colors group flex items-center"
+                            className="text-gray-400 hover:text-green-400 transition-colors group flex items-center"
                           >
                             <CheckCircleIcon className="h-5 w-5" />
                             <span className="pointer-events-none absolute right-full mr-2 top-1/2 -translate-y-1/2 px-2 py-1 text-xs text-gray-100 bg-gray-900 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-[100]">
@@ -421,6 +546,8 @@ export default function MeusAnuncios() {
         onConfirm={confirmVenda}
         title="Confirmar Venda"
         message="Tem certeza que deseja marcar este anúncio como vendido? Esta ação não pode ser desfeita."
+        confirmButtonText="Confirmar Venda"
+        confirmButtonClass="bg-green-500 hover:bg-green-600 text-white"
       />
 
       <Dialog

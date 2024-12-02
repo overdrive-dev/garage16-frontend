@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import VehicleCard from '@/components/VehicleCard';
-import { mockAnuncios } from '@/mocks/anuncios';
+import { mockAnuncios, STATUS_ANUNCIO } from '@/mocks/anuncios';
 import Breadcrumb from '@/components/Breadcrumb';
 
 export default function VeiculosPage() {
@@ -16,7 +16,7 @@ export default function VeiculosPage() {
 
   // Extrair dados únicos do mock para os filtros
   const dadosFiltros = useMemo(() => {
-    const anuncios = mockAnuncios.publicados.filter(a => a.status === 'ativo');
+    const anuncios = mockAnuncios.publicados.filter(a => a.status === STATUS_ANUNCIO.VENDENDO);
     
     const marcas = [...new Set(anuncios.map(a => a.marca))].sort();
     const anos = anuncios.map(a => a.ano);
@@ -34,7 +34,7 @@ export default function VeiculosPage() {
   // Filtrar veículos
   const veiculos = useMemo(() => {
     return mockAnuncios.publicados.filter(anuncio => {
-      if (anuncio.status !== 'ativo') return false;
+      if (anuncio.status !== STATUS_ANUNCIO.VENDENDO) return false;
 
       const matchMarca = !filtros.marca || 
         anuncio.marca?.toLowerCase() === filtros.marca.toLowerCase();
@@ -57,7 +57,7 @@ export default function VeiculosPage() {
 
   const breadcrumbItems = [
     { label: 'Home', href: '/' },
-    { label: 'Veículos', href: '/veiculos' }
+    { label: 'Veículos' }
   ];
 
   return (
@@ -79,9 +79,9 @@ export default function VeiculosPage() {
                   onChange={(e) => setFiltros({...filtros, marca: e.target.value})}
                   className="w-full bg-gray-700 border-gray-600 text-gray-100 border rounded p-2 focus:ring-orange-500 focus:border-orange-500"
                 >
-                  <option value="">Todas as marcas</option>
+                  <option key="todas" value="">Todas as marcas</option>
                   {dadosFiltros.marcas.map(marca => (
-                    <option key={marca} value={marca}>{marca}</option>
+                    <option key={`marca-${marca}`} value={marca}>{marca}</option>
                   ))}
                 </select>
               </div>

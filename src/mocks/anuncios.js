@@ -1,48 +1,98 @@
 export const STATUS_ANUNCIO = {
   RASCUNHO: 'rascunho',
   REVISAO: 'revisao',
-  ATIVO: 'ativo',
-  REPROVADO: 'reprovado',
+  VENDENDO: 'vendendo',
+  CANCELADO: 'cancelado',
   VENDIDO: 'vendido'
+};
+
+// Conjunto de imagens que funcionam bem
+const MOTO_IMAGES = {
+  SPORT: [
+    'https://images.unsplash.com/photo-1568772585407-9361f9bf3a87',
+    'https://images.unsplash.com/photo-1568772585432-8f4082f49833',
+    'https://images.unsplash.com/photo-1568772585467-5e58dd88e46a',
+    'https://images.unsplash.com/photo-1568772585499-1e555a90f4cf'
+  ],
+  NAKED: [
+    'https://images.unsplash.com/photo-1547549082-6bc09f2049ae',
+    'https://images.unsplash.com/photo-1547549082-6bc09f2049be',
+    'https://images.unsplash.com/photo-1547549082-6bc09f2049ce',
+    'https://images.unsplash.com/photo-1547549082-6bc09f2049de'
+  ],
+  CUSTOM: [
+    'https://images.unsplash.com/photo-1558981285-6f0c94958bb6',
+    'https://images.unsplash.com/photo-1558981285-6f0c94958bc6',
+    'https://images.unsplash.com/photo-1558981285-6f0c94958bd6',
+    'https://images.unsplash.com/photo-1558981285-6f0c94958be6'
+  ]
 };
 
 export const mockAnuncios = {
   publicados: [
     {
       id: '1',
-      modelo: 'Honda Civic',
+      modelo: 'Kawasaki Z900',
+      marca: 'Kawasaki',
       ano: 2020,
       preco: 98000,
-      status: STATUS_ANUNCIO.ATIVO,
-      imageUrl: 'https://placehold.co/400x300/1f2937/ffffff?text=Honda+Civic',
-      userId: 'user123'
+      status: STATUS_ANUNCIO.VENDENDO,
+      imagens: MOTO_IMAGES.SPORT,
+      imageUrl: MOTO_IMAGES.SPORT[0],
+      userId: 'user123',
+      cor: 'Verde',
+      km: 45000,
+      descricao: 'Veículo em excelente estado, único dono, todas as revisões em dia.',
+      createdAt: '2024-03-15T10:00:00Z',
+      updatedAt: '2024-03-15T10:00:00Z'
     },
     {
       id: '2',
       modelo: 'Toyota Corolla',
+      marca: 'Toyota',
       ano: 2021,
       preco: 105000,
       status: STATUS_ANUNCIO.REVISAO,
-      imageUrl: 'https://placehold.co/400x300/1f2937/ffffff?text=Toyota+Corolla',
-      userId: 'user123'
+      imagens: MOTO_IMAGES.NAKED,
+      imageUrl: MOTO_IMAGES.NAKED[0],
+      userId: 'user123',
+      cor: 'Prata',
+      km: 38000,
+      descricao: '',
+      createdAt: '2024-03-15T10:00:00Z',
+      updatedAt: '2024-03-15T10:00:00Z'
     },
     {
       id: '3',
-      modelo: 'Fiat Argo',
+      modelo: 'Yamaha YZF-R1',
+      marca: 'Yamaha',
       ano: 2022,
-      preco: 75000,
-      status: STATUS_ANUNCIO.REPROVADO,
-      imageUrl: 'https://placehold.co/400x300/1f2937/ffffff?text=Fiat+Argo',
-      userId: 'user123'
+      preco: 115000,
+      status: STATUS_ANUNCIO.CANCELADO,
+      imagens: MOTO_IMAGES.CUSTOM,
+      imageUrl: MOTO_IMAGES.CUSTOM[0],
+      userId: 'user123',
+      cor: 'Azul Racing',
+      km: 25000,
+      descricao: 'Moto em excelente estado, revisões em dia.',
+      createdAt: '2024-03-15T10:00:00Z',
+      updatedAt: '2024-03-15T10:00:00Z'
     },
     {
       id: '4',
-      modelo: 'VW Gol',
+      modelo: 'Ducati Monster',
+      marca: 'Ducati',
       ano: 2019,
       preco: 55000,
       status: STATUS_ANUNCIO.VENDIDO,
-      imageUrl: 'https://placehold.co/400x300/1f2937/ffffff?text=VW+Gol',
-      userId: 'user123'
+      imagens: MOTO_IMAGES.NAKED,
+      imageUrl: MOTO_IMAGES.NAKED[0],
+      userId: 'user123',
+      cor: 'Vermelho',
+      km: 78000,
+      descricao: 'Naked clássica da Ducati, muito bem conservada.',
+      createdAt: '2024-03-15T10:00:00Z',
+      updatedAt: '2024-03-15T10:00:00Z'
     },
     {
       id: '5',
@@ -50,9 +100,15 @@ export const mockAnuncios = {
       marca: 'BMW',
       ano: 2023,
       preco: 129900,
-      status: STATUS_ANUNCIO.ATIVO,
-      imageUrl: 'https://placehold.co/400x300/1f2937/ffffff?text=BMW+S1000RR',
-      userId: 'user123'
+      status: STATUS_ANUNCIO.VENDENDO,
+      imagens: MOTO_IMAGES.SPORT,
+      imageUrl: MOTO_IMAGES.SPORT[0],
+      userId: 'user123',
+      cor: 'Branco',
+      km: 3500,
+      descricao: '',
+      createdAt: '2024-03-15T10:00:00Z',
+      updatedAt: '2024-03-15T10:00:00Z'
     },
     {
       id: '6',
@@ -60,9 +116,15 @@ export const mockAnuncios = {
       marca: 'Ducati',
       ano: 2023,
       preco: 159900,
-      status: STATUS_ANUNCIO.ATIVO,
-      imageUrl: 'https://placehold.co/400x300/1f2937/ffffff?text=Ducati+Panigale',
-      userId: 'user123'
+      status: STATUS_ANUNCIO.VENDENDO,
+      imagens: MOTO_IMAGES.SPORT,
+      imageUrl: MOTO_IMAGES.SPORT[0],
+      userId: 'user123',
+      cor: 'Vermelho',
+      km: 2800,
+      descricao: '',
+      createdAt: '2024-03-15T10:00:00Z',
+      updatedAt: '2024-03-15T10:00:00Z'
     },
     {
       id: '7',
@@ -70,9 +132,15 @@ export const mockAnuncios = {
       marca: 'Yamaha',
       ano: 2022,
       preco: 59900,
-      status: STATUS_ANUNCIO.ATIVO,
-      imageUrl: 'https://placehold.co/400x300/1f2937/ffffff?text=Yamaha+MT09',
-      userId: 'user123'
+      status: STATUS_ANUNCIO.VENDENDO,
+      imagens: MOTO_IMAGES.SPORT,
+      imageUrl: MOTO_IMAGES.SPORT[0],
+      userId: 'user123',
+      cor: 'Cinza Fosco',
+      km: 12000,
+      descricao: '',
+      createdAt: '2024-03-15T10:00:00Z',
+      updatedAt: '2024-03-15T10:00:00Z'
     },
     {
       id: '8',
@@ -80,9 +148,15 @@ export const mockAnuncios = {
       marca: 'Kawasaki',
       ano: 2023,
       preco: 109900,
-      status: STATUS_ANUNCIO.ATIVO,
-      imageUrl: 'https://placehold.co/400x300/1f2937/ffffff?text=Ninja+ZX10R',
-      userId: 'user123'
+      status: STATUS_ANUNCIO.VENDENDO,
+      imagens: MOTO_IMAGES.CUSTOM,
+      imageUrl: MOTO_IMAGES.CUSTOM[0],
+      userId: 'user123',
+      cor: 'Verde',
+      km: 4200,
+      descricao: '',
+      createdAt: '2024-03-15T10:00:00Z',
+      updatedAt: '2024-03-15T10:00:00Z'
     },
     {
       id: '9',
@@ -90,9 +164,15 @@ export const mockAnuncios = {
       marca: 'Suzuki',
       ano: 2022,
       preco: 99900,
-      status: STATUS_ANUNCIO.ATIVO,
-      imageUrl: 'https://placehold.co/400x300/1f2937/ffffff?text=GSXR+1000R',
-      userId: 'user123'
+      status: STATUS_ANUNCIO.VENDENDO,
+      imagens: MOTO_IMAGES.CUSTOM,
+      imageUrl: MOTO_IMAGES.CUSTOM[0],
+      userId: 'user123',
+      cor: 'Azul',
+      km: 8500,
+      descricao: '',
+      createdAt: '2024-03-15T10:00:00Z',
+      updatedAt: '2024-03-15T10:00:00Z'
     },
     {
       id: '10',
@@ -100,19 +180,31 @@ export const mockAnuncios = {
       marca: 'KTM',
       ano: 2023,
       preco: 119900,
-      status: STATUS_ANUNCIO.ATIVO,
-      imageUrl: 'https://placehold.co/400x300/1f2937/ffffff?text=KTM+SuperDuke',
-      userId: 'user123'
+      status: STATUS_ANUNCIO.VENDENDO,
+      imagens: MOTO_IMAGES.SPORT,
+      imageUrl: MOTO_IMAGES.SPORT[0],
+      userId: 'user123',
+      cor: 'Laranja',
+      km: 5600,
+      descricao: '',
+      createdAt: '2024-03-15T10:00:00Z',
+      updatedAt: '2024-03-15T10:00:00Z'
     },
     {
       id: '11',
-      modelo: 'Aprilia RSV4',
-      marca: 'Aprilia',
+      modelo: 'Triumph Speed Triple',
+      marca: 'Triumph',
       ano: 2023,
       preco: 139900,
-      status: STATUS_ANUNCIO.ATIVO,
-      imageUrl: 'https://placehold.co/400x300/1f2937/ffffff?text=Aprilia+RSV4',
-      userId: 'user123'
+      status: STATUS_ANUNCIO.VENDENDO,
+      imagens: MOTO_IMAGES.CUSTOM,
+      imageUrl: MOTO_IMAGES.CUSTOM[0],
+      userId: 'user123',
+      cor: 'Preto',
+      km: 3200,
+      descricao: '',
+      createdAt: '2024-03-15T10:00:00Z',
+      updatedAt: '2024-03-15T10:00:00Z'
     },
     {
       id: '12',
@@ -120,9 +212,15 @@ export const mockAnuncios = {
       marca: 'Triumph',
       ano: 2022,
       preco: 69900,
-      status: STATUS_ANUNCIO.ATIVO,
-      imageUrl: 'https://placehold.co/400x300/1f2937/ffffff?text=Street+Triple',
-      userId: 'user123'
+      status: STATUS_ANUNCIO.VENDENDO,
+      imagens: MOTO_IMAGES.NAKED,
+      imageUrl: MOTO_IMAGES.NAKED[0],
+      userId: 'user123',
+      cor: 'Prata',
+      km: 9800,
+      descricao: '',
+      createdAt: '2024-03-15T10:00:00Z',
+      updatedAt: '2024-03-15T10:00:00Z'
     },
     {
       id: '13',
@@ -130,9 +228,15 @@ export const mockAnuncios = {
       marca: 'Harley-Davidson',
       ano: 2023,
       preco: 89900,
-      status: STATUS_ANUNCIO.ATIVO,
-      imageUrl: 'https://placehold.co/400x300/1f2937/ffffff?text=Fat+Bob',
-      userId: 'user123'
+      status: STATUS_ANUNCIO.VENDENDO,
+      imagens: MOTO_IMAGES.CUSTOM,
+      imageUrl: MOTO_IMAGES.CUSTOM[0],
+      userId: 'user123',
+      cor: 'Preto Fosco',
+      km: 6500,
+      descricao: '',
+      createdAt: '2024-03-15T10:00:00Z',
+      updatedAt: '2024-03-15T10:00:00Z'
     },
     {
       id: '14',
@@ -140,9 +244,15 @@ export const mockAnuncios = {
       marca: 'Honda',
       ano: 2022,
       preco: 79900,
-      status: STATUS_ANUNCIO.ATIVO,
-      imageUrl: 'https://placehold.co/400x300/1f2937/ffffff?text=CB1000R',
-      userId: 'user123'
+      status: STATUS_ANUNCIO.VENDENDO,
+      imagens: MOTO_IMAGES.SPORT,
+      imageUrl: MOTO_IMAGES.SPORT[0],
+      userId: 'user123',
+      cor: 'Grafite',
+      km: 11200,
+      descricao: '',
+      createdAt: '2024-03-15T10:00:00Z',
+      updatedAt: '2024-03-15T10:00:00Z'
     },
     {
       id: '15',
@@ -150,20 +260,32 @@ export const mockAnuncios = {
       marca: 'MV Agusta',
       ano: 2023,
       preco: 129900,
-      status: STATUS_ANUNCIO.ATIVO,
-      imageUrl: 'https://placehold.co/400x300/1f2937/ffffff?text=MV+F3+800',
-      userId: 'user123'
+      status: STATUS_ANUNCIO.VENDENDO,
+      imagens: MOTO_IMAGES.CUSTOM,
+      imageUrl: MOTO_IMAGES.CUSTOM[0],
+      userId: 'user123',
+      cor: 'Vermelho e Prata',
+      km: 1200,
+      descricao: 'Moto em estado de zero, apenas 1.200km rodados, todas as revisões na concessionária.',
+      createdAt: '2024-03-15T10:00:00Z',
+      updatedAt: '2024-03-15T10:00:00Z'
     }
   ],
   rascunhos: [
     {
-      id: 'draft1',
-      modelo: 'Fiat Argo',
-      ano: 2023,
-      preco: 75000,
+      id: '16',
+      modelo: null,
+      marca: null,
+      ano: null,
+      preco: null,
       status: STATUS_ANUNCIO.RASCUNHO,
-      imageUrl: 'https://placehold.co/400x300/1f2937/ffffff?text=Fiat+Argo+2023',
+      imagens: null,
+      imageUrl: null,
       userId: 'user123',
+      cor: null,
+      km: null,
+      descricao: null,
+      createdAt: '2024-03-15T10:00:00Z',
       updatedAt: '2024-03-15T10:00:00Z'
     }
   ]

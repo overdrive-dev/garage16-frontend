@@ -2,8 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
-import Link from 'next/link';
-import { ChevronRightIcon } from '@heroicons/react/24/outline';
 import { mockAnuncios } from '@/mocks/anuncios';
 import Breadcrumb from '@/components/Breadcrumb';
 
@@ -14,23 +12,13 @@ export default function VeiculoDetalhesClient({ id }) {
 
   useEffect(() => {
     const veiculoEncontrado = mockAnuncios.publicados.find(v => v.id === id);
-    if (veiculoEncontrado) {
-      // Garantir que temos uma URL válida
-      const imageUrl = veiculoEncontrado.imageUrl || 'https://placehold.co/800x600/1f2937/ffffff?text=Sem+Imagem';
-      setVeiculo({
-        ...veiculoEncontrado,
-        imageUrl
-      });
-    }
+    setVeiculo(veiculoEncontrado);
     setLoading(false);
   }, [id]);
 
   if (loading || !veiculo) {
     return <div>Carregando...</div>;
   }
-
-  // Array de imagens para galeria (usando a mesma imagem várias vezes para demo)
-  const imagens = Array(5).fill(veiculo.imageUrl);
 
   const breadcrumbItems = [
     { label: 'Home', href: '/' },
@@ -48,10 +36,10 @@ export default function VeiculoDetalhesClient({ id }) {
           {/* Coluna Esquerda - Fotos */}
           <div className="space-y-6">
             {/* Imagem Principal */}
-            {veiculo.imageUrl && (
+            {veiculo.imagens && (
               <div className="relative aspect-[4/3] w-full">
                 <Image
-                  src={imagens[selectedImage]}
+                  src={veiculo.imagens[selectedImage]}
                   alt={veiculo.modelo}
                   fill
                   className="object-cover rounded-lg"
@@ -61,10 +49,10 @@ export default function VeiculoDetalhesClient({ id }) {
             )}
 
             {/* Galeria de Miniaturas */}
-            {imagens.length > 0 && (
+            {veiculo.imagens?.length > 0 && (
               <div className="overflow-x-auto">
                 <div className="flex gap-2">
-                  {imagens.map((img, index) => (
+                  {veiculo.imagens.map((img, index) => (
                     <button
                       key={`thumb-${index}`}
                       onClick={() => setSelectedImage(index)}
