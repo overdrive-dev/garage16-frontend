@@ -193,196 +193,198 @@ export default function VeiculosPage() {
 
   return (
     <main className="min-h-screen bg-gray-900">
-      <div className="w-full mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="w-full mx-auto">
         <Breadcrumb items={breadcrumbItems} />
 
-        <div className="flex gap-8 p-6">
-          {/* Sidebar com Filtros */}
-          <div className="w-64 flex-shrink-0 space-y-6">
-            {/* Filtros Salvos */}
-            {Object.keys(filtrosSalvos).length > 0 && (
-              <div className="bg-gray-800 rounded-lg p-4 space-y-4">
-                <h3 className="font-medium text-gray-200">Filtros Salvos</h3>
-                <div className="space-y-2">
-                  {Object.entries(filtrosSalvos).map(([id, filtro]) => (
-                    <div 
-                      key={id}
-                      className={`flex items-center justify-between p-2 rounded transition-colors group
-                        ${id === filtroSelecionadoId 
-                          ? 'bg-orange-500/10 border border-orange-500/20' 
-                          : 'bg-gray-700 hover:bg-gray-600'}`}
-                    >
-                      <button
-                        onClick={() => handleLoadFiltro(id, filtro)}
-                        className="flex-1 text-left text-sm text-gray-200"
+        <div className="px-4 sm:px-6 lg:px-8 pb-8">
+          <div className="flex gap-8">
+            {/* Sidebar com Filtros */}
+            <div className="w-64 flex-shrink-0 space-y-6">
+              {/* Filtros Salvos */}
+              {Object.keys(filtrosSalvos).length > 0 && (
+                <div className="bg-gray-800 rounded-lg p-4 space-y-4">
+                  <h3 className="font-medium text-gray-200">Filtros Salvos</h3>
+                  <div className="space-y-2">
+                    {Object.entries(filtrosSalvos).map(([id, filtro]) => (
+                      <div 
+                        key={id}
+                        className={`flex items-center justify-between p-2 rounded transition-colors group
+                          ${id === filtroSelecionadoId 
+                            ? 'bg-orange-500/10 border border-orange-500/20' 
+                            : 'bg-gray-700 hover:bg-gray-600'}`}
                       >
-                        {filtro.nome}
-                      </button>
-                      <button
-                        onClick={(e) => handleDeleteClick(e, id)}
-                        className="text-gray-400 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        <TrashIcon className="h-4 w-4" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Filtros Atuais */}
-            <div className="bg-gray-800 rounded-lg p-4 space-y-6">
-              {/* Marca */}
-              <div>
-                <label className="block text-sm font-medium text-gray-200 mb-2">
-                  Marca
-                </label>
-                <select
-                  value={filtros.marca}
-                  onChange={(e) => setFiltros({...filtros, marca: e.target.value})}
-                  className="w-full bg-gray-700 border-gray-600 text-gray-100 border rounded p-2 focus:ring-orange-500 focus:border-orange-500"
-                >
-                  <option value="">Todas as marcas</option>
-                  {dadosFiltros.marcas.map(marca => (
-                    <option key={`marca-${marca}`} value={marca}>{marca}</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Ano */}
-              <div className="grid grid-cols-2 gap-2">
-                <div className="relative group">
-                  <input
-                    type="text"
-                    value={filtros.anoMin}
-                    onChange={(e) => handleAnoChange(e, 'anoMin')}
-                    placeholder={dadosFiltros.anoMin.toString()}
-                    className="w-full bg-gray-700 border-gray-600 text-gray-100 border rounded p-2 pr-8 focus:ring-orange-500 focus:border-orange-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                    maxLength={4}
-                  />
-                  {filtros.anoMin && (
-                    <button
-                      onClick={() => setFiltros(prev => ({ ...prev, anoMin: '' }))}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-200 opacity-0 group-hover:opacity-100 transition-all"
-                    >
-                      <XMarkIcon className="h-4 w-4" />
-                    </button>
-                  )}
-                </div>
-                <div className="relative group">
-                  <input
-                    type="text"
-                    value={filtros.anoMax}
-                    onChange={(e) => handleAnoChange(e, 'anoMax')}
-                    placeholder={dadosFiltros.anoMax.toString()}
-                    className="w-full bg-gray-700 border-gray-600 text-gray-100 border rounded p-2 pr-8 focus:ring-orange-500 focus:border-orange-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                    maxLength={4}
-                  />
-                  {filtros.anoMax && (
-                    <button
-                      onClick={() => setFiltros(prev => ({ ...prev, anoMax: '' }))}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-200 opacity-0 group-hover:opacity-100 transition-all"
-                    >
-                      <XMarkIcon className="h-4 w-4" />
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              {/* Preço */}
-              <div className="space-y-2">
-                <div className="relative group">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-                    R$
-                  </span>
-                  <input
-                    type="text"
-                    value={formatCurrency(filtros.precoMin)}
-                    onChange={(e) => handlePrecoChange(e, 'precoMin')}
-                    placeholder={`${formatarPreco(dadosFiltros.precoMin)}`.replace('R$', '').trim()}
-                    className="w-full bg-gray-700 border-gray-600 text-gray-100 border rounded p-2 pl-8 pr-8 focus:ring-orange-500 focus:border-orange-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                  />
-                  {filtros.precoMin && (
-                    <button
-                      onClick={() => setFiltros(prev => ({ ...prev, precoMin: '' }))}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-200 opacity-0 group-hover:opacity-100 transition-all"
-                    >
-                      <XMarkIcon className="h-4 w-4" />
-                    </button>
-                  )}
-                </div>
-                <div className="relative group">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-                    R$
-                  </span>
-                  <input
-                    type="text"
-                    value={formatCurrency(filtros.precoMax)}
-                    onChange={(e) => handlePrecoChange(e, 'precoMax')}
-                    placeholder={`${formatarPreco(dadosFiltros.precoMax)}`.replace('R$', '').trim()}
-                    className="w-full bg-gray-700 border-gray-600 text-gray-100 border rounded p-2 pl-8 pr-8 focus:ring-orange-500 focus:border-orange-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                  />
-                  {filtros.precoMax && (
-                    <button
-                      onClick={() => setFiltros(prev => ({ ...prev, precoMax: '' }))}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-200 opacity-0 group-hover:opacity-100 transition-all"
-                    >
-                      <XMarkIcon className="h-4 w-4" />
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              {/* Botões de Ação */}
-              {temFiltrosAtivos && (
-                <div className="flex justify-between items-center">
-                  <button
-                    onClick={() => setFiltros({
-                      marca: '',
-                      anoMin: '',
-                      anoMax: '',
-                      precoMin: '',
-                      precoMax: ''
-                    })}
-                    className="text-gray-400 hover:text-gray-200 transition-colors"
-                  >
-                    Limpar
-                  </button>
-
-                  <div className="flex gap-2">
-                    {filtroSelecionadoId ? (
-                      // Só mostra botão de atualizar se houver alterações
-                      temAlteracoes && (
                         <button
-                          onClick={handleUpdateFiltro}
-                          className="bg-orange-500 text-white px-4 py-2 rounded hover:bg-orange-600 transition-colors"
+                          onClick={() => handleLoadFiltro(id, filtro)}
+                          className="flex-1 text-left text-sm text-gray-200"
                         >
-                          Atualizar
+                          {filtro.nome}
                         </button>
-                      )
-                    ) : (
+                        <button
+                          onClick={(e) => handleDeleteClick(e, id)}
+                          className="text-gray-400 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <TrashIcon className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Filtros Atuais */}
+              <div className="bg-gray-800 rounded-lg p-4 space-y-6">
+                {/* Marca */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-200 mb-2">
+                    Marca
+                  </label>
+                  <select
+                    value={filtros.marca}
+                    onChange={(e) => setFiltros({...filtros, marca: e.target.value})}
+                    className="w-full bg-gray-700 border-gray-600 text-gray-100 border rounded p-2 focus:ring-orange-500 focus:border-orange-500"
+                  >
+                    <option value="">Todas as marcas</option>
+                    {dadosFiltros.marcas.map(marca => (
+                      <option key={`marca-${marca}`} value={marca}>{marca}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Ano */}
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="relative group">
+                    <input
+                      type="text"
+                      value={filtros.anoMin}
+                      onChange={(e) => handleAnoChange(e, 'anoMin')}
+                      placeholder={dadosFiltros.anoMin.toString()}
+                      className="w-full bg-gray-700 border-gray-600 text-gray-100 border rounded p-2 pr-8 focus:ring-orange-500 focus:border-orange-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      maxLength={4}
+                    />
+                    {filtros.anoMin && (
                       <button
-                        onClick={() => setShowSaveModal(true)}
-                        className="bg-orange-500 text-white px-4 py-2 rounded hover:bg-orange-600 transition-colors"
+                        onClick={() => setFiltros(prev => ({ ...prev, anoMin: '' }))}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-200 opacity-0 group-hover:opacity-100 transition-all"
                       >
-                        Salvar
+                        <XMarkIcon className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
+                  <div className="relative group">
+                    <input
+                      type="text"
+                      value={filtros.anoMax}
+                      onChange={(e) => handleAnoChange(e, 'anoMax')}
+                      placeholder={dadosFiltros.anoMax.toString()}
+                      className="w-full bg-gray-700 border-gray-600 text-gray-100 border rounded p-2 pr-8 focus:ring-orange-500 focus:border-orange-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      maxLength={4}
+                    />
+                    {filtros.anoMax && (
+                      <button
+                        onClick={() => setFiltros(prev => ({ ...prev, anoMax: '' }))}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-200 opacity-0 group-hover:opacity-100 transition-all"
+                      >
+                        <XMarkIcon className="h-4 w-4" />
                       </button>
                     )}
                   </div>
                 </div>
-              )}
-            </div>
-          </div>
 
-          {/* Grid de Veículos */}
-          <div className="flex-1">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {veiculos.map((veiculo) => (
-                <VehicleCard 
-                  key={`vehicle-${veiculo.id}`}
-                  veiculo={veiculo} 
-                />
-              ))}
+                {/* Preço */}
+                <div className="space-y-2">
+                  <div className="relative group">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                      R$
+                    </span>
+                    <input
+                      type="text"
+                      value={formatCurrency(filtros.precoMin)}
+                      onChange={(e) => handlePrecoChange(e, 'precoMin')}
+                      placeholder={`${formatarPreco(dadosFiltros.precoMin)}`.replace('R$', '').trim()}
+                      className="w-full bg-gray-700 border-gray-600 text-gray-100 border rounded p-2 pl-8 pr-8 focus:ring-orange-500 focus:border-orange-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    />
+                    {filtros.precoMin && (
+                      <button
+                        onClick={() => setFiltros(prev => ({ ...prev, precoMin: '' }))}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-200 opacity-0 group-hover:opacity-100 transition-all"
+                      >
+                        <XMarkIcon className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
+                  <div className="relative group">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                      R$
+                    </span>
+                    <input
+                      type="text"
+                      value={formatCurrency(filtros.precoMax)}
+                      onChange={(e) => handlePrecoChange(e, 'precoMax')}
+                      placeholder={`${formatarPreco(dadosFiltros.precoMax)}`.replace('R$', '').trim()}
+                      className="w-full bg-gray-700 border-gray-600 text-gray-100 border rounded p-2 pl-8 pr-8 focus:ring-orange-500 focus:border-orange-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    />
+                    {filtros.precoMax && (
+                      <button
+                        onClick={() => setFiltros(prev => ({ ...prev, precoMax: '' }))}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-200 opacity-0 group-hover:opacity-100 transition-all"
+                      >
+                        <XMarkIcon className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Botões de Ação */}
+                {temFiltrosAtivos && (
+                  <div className="flex justify-between items-center">
+                    <button
+                      onClick={() => setFiltros({
+                        marca: '',
+                        anoMin: '',
+                        anoMax: '',
+                        precoMin: '',
+                        precoMax: ''
+                      })}
+                      className="text-gray-400 hover:text-gray-200 transition-colors"
+                    >
+                      Limpar
+                    </button>
+
+                    <div className="flex gap-2">
+                      {filtroSelecionadoId ? (
+                        // Só mostra botão de atualizar se houver alterações
+                        temAlteracoes && (
+                          <button
+                            onClick={handleUpdateFiltro}
+                            className="bg-orange-500 text-white px-4 py-2 rounded hover:bg-orange-600 transition-colors"
+                          >
+                            Atualizar
+                          </button>
+                        )
+                      ) : (
+                        <button
+                          onClick={() => setShowSaveModal(true)}
+                          className="bg-orange-500 text-white px-4 py-2 rounded hover:bg-orange-600 transition-colors"
+                        >
+                          Salvar
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Grid de Veículos */}
+            <div className="flex-1">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {veiculos.map((veiculo) => (
+                  <VehicleCard 
+                    key={`vehicle-${veiculo.id}`}
+                    veiculo={veiculo} 
+                  />
+                ))}
+              </div>
             </div>
           </div>
         </div>

@@ -61,7 +61,7 @@ export default function Header() {
     <header className="bg-gray-900">
       <div className="w-full mx-auto px-4 sm:px-6 lg:px-8">
         <nav className="w-full mx-auto">
-          <div className="flex justify-between items-center h-16">
+          <div className="flex justify-between items-center h-16 md:h-20 md:mt-6">
             <div className="flex items-center">
               <Link href="/" className="flex items-center">
                 <span className="text-white text-2xl font-bold">GARAGE</span>
