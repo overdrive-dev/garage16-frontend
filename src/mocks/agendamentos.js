@@ -1,9 +1,9 @@
 export const STATUS_AGENDAMENTO = {
   AGENDADO: 'agendado',
-  AGUARDANDO_DISPONIBILIDADE: 'aguardando_disponibilidade',
-  AGUARDANDO_CHECKIN: 'aguardando_checkin',
   CONFIRMADO: 'confirmado',
-  ACONTECENDO: 'acontecendo',
+  CHECKIN: 'checkin',
+  VISITA_CONFIRMADA: 'visita_confirmada',
+  ANDAMENTO: 'andamento',
   CONCLUIDO: 'concluido',
   CANCELADO: 'cancelado'
 };
@@ -15,148 +15,162 @@ const createDate = (daysFromNow, time) => {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}T${time}:00Z`;
 };
 
-// Usuário mockado para testes - usando ID real do Firebase
+// Usuário mockado para testes
 const CURRENT_USER = 'Ki0nY4yfm2apORlsm5WaMcWcNce2';
 
 export const agendamentos = [
-  // Agendamentos como comprador
+  // Agendado (aguardando vendedor)
   {
     id: 'agd-1',
     veiculoId: '1', // Kawasaki Z900
-    vendedorId: 'user123',
-    compradorId: CURRENT_USER, // Você como comprador
+    vendedorId: CURRENT_USER,
+    compradorId: CURRENT_USER,
     data: createDate(2, '10:00'),
     horario: '10:00',
     status: STATUS_AGENDAMENTO.AGENDADO,
+    checkInComprador: false,
+    checkInVendedor: false,
+    resultado: null,
     createdAt: createDate(-1, '10:00'),
     updatedAt: createDate(-1, '10:00'),
     observacoes: 'Aguardando confirmação do vendedor'
   },
+
+  // Confirmado (aguardando janela de check-in)
   {
     id: 'agd-2',
     veiculoId: '2', // BMW S1000RR
-    vendedorId: CURRENT_USER, // Você como vendedor
-    compradorId: 'user789',
+    vendedorId: CURRENT_USER,
+    compradorId: CURRENT_USER,
     data: createDate(1, '14:00'),
     horario: '14:00',
-    status: STATUS_AGENDAMENTO.AGUARDANDO_DISPONIBILIDADE,
+    status: STATUS_AGENDAMENTO.CONFIRMADO,
+    checkInComprador: false,
+    checkInVendedor: false,
+    resultado: null,
     createdAt: createDate(-2, '11:00'),
     updatedAt: createDate(-2, '11:00'),
-    observacoes: 'Vendedor precisa confirmar disponibilidade'
+    observacoes: 'Vendedor confirmou disponibilidade'
   },
+
+  // Em Check-in (dentro da janela)
   {
     id: 'agd-3',
-    veiculoId: '5', // Ducati Panigale V4
+    veiculoId: '3',
     vendedorId: CURRENT_USER,
-    compradorId: 'user456',
+    compradorId: CURRENT_USER,
     data: createDate(0, '15:00'), // Hoje
     horario: '15:00',
-    status: STATUS_AGENDAMENTO.AGUARDANDO_CHECKIN,
+    status: STATUS_AGENDAMENTO.CHECKIN,
+    checkInComprador: false,
+    checkInVendedor: false,
+    resultado: null,
     createdAt: createDate(-3, '12:00'),
     updatedAt: createDate(-1, '12:00'),
-    observacoes: 'Check-in disponível 4 horas antes'
+    observacoes: 'Check-in disponível'
   },
-  // Agendamentos como vendedor
+
+  // Em Check-in (comprador já fez)
   {
     id: 'agd-4',
-    veiculoId: '7', // Kawasaki Ninja ZX-10R
+    veiculoId: '4',
     vendedorId: CURRENT_USER,
-    compradorId: 'user789',
-    data: createDate(0, '11:00'), // Hoje
-    horario: '11:00',
-    status: STATUS_AGENDAMENTO.CONFIRMADO,
-    createdAt: createDate(-4, '13:00'),
-    updatedAt: createDate(-1, '13:00'),
-    observacoes: 'Cliente confirmou presença'
-  },
-  {
-    id: 'agd-5',
-    veiculoId: '8', // Triumph Speed Triple
-    vendedorId: CURRENT_USER,
-    compradorId: 'user456',
+    compradorId: CURRENT_USER,
     data: createDate(0, '16:00'), // Hoje
     horario: '16:00',
-    status: STATUS_AGENDAMENTO.ACONTECENDO,
-    createdAt: createDate(-5, '14:00'),
-    updatedAt: createDate(0, '16:00'),
-    observacoes: 'Visita em andamento'
-  },
-  {
-    id: 'agd-6',
-    veiculoId: '9', // Harley-Davidson Fat Bob
-    vendedorId: 'user456',
-    compradorId: CURRENT_USER,
-    data: createDate(-1, '09:00'), // Ontem
-    horario: '09:00',
-    status: STATUS_AGENDAMENTO.CONCLUIDO,
-    createdAt: createDate(-6, '15:00'),
-    updatedAt: createDate(-1, '11:00'),
-    observacoes: 'Visita realizada com sucesso'
-  },
-  {
-    id: 'agd-7',
-    veiculoId: '10', // Honda CBR 1000RR-R
-    vendedorId: CURRENT_USER,
-    compradorId: 'user789',
-    data: createDate(-2, '13:00'),
-    horario: '13:00',
-    status: STATUS_AGENDAMENTO.CANCELADO,
-    createdAt: createDate(-7, '16:00'),
-    updatedAt: createDate(-3, '10:00'),
-    observacoes: 'Cancelado pelo comprador'
-  },
-  // Mais exemplos com diferentes status
-  {
-    id: 'agd-8',
-    veiculoId: '11', // Indian Scout Bobber
-    vendedorId: CURRENT_USER,
-    compradorId: 'user456',
-    data: createDate(3, '10:00'),
-    horario: '10:00',
-    status: STATUS_AGENDAMENTO.AGUARDANDO_DISPONIBILIDADE,
+    status: STATUS_AGENDAMENTO.CHECKIN,
+    checkInComprador: true,
+    checkInVendedor: false,
+    resultado: null,
     createdAt: createDate(-1, '09:00'),
     updatedAt: createDate(-1, '09:00'),
-    observacoes: 'Aguardando confirmação do vendedor'
+    observacoes: 'Comprador realizou check-in'
   },
+
+  // Visita Confirmada (ambos fizeram check-in)
   {
-    id: 'agd-9',
-    veiculoId: '12', // Triumph Street Triple RS
+    id: 'agd-5',
+    veiculoId: '5',
     vendedorId: CURRENT_USER,
-    compradorId: 'user789',
-    data: createDate(0, '14:00'), // Hoje
-    horario: '14:00',
-    status: STATUS_AGENDAMENTO.CANCELADO,
+    compradorId: CURRENT_USER,
+    data: createDate(0, '17:00'), // Hoje
+    horario: '17:00',
+    status: STATUS_AGENDAMENTO.VISITA_CONFIRMADA,
+    checkInComprador: true,
+    checkInVendedor: true,
+    resultado: null,
     createdAt: createDate(-2, '15:00'),
     updatedAt: createDate(-1, '16:00'),
-    observacoes: 'Cancelado pelo vendedor - Indisponível na data'
+    observacoes: 'Visita confirmada por ambas as partes'
   },
+
+  // Em Andamento
   {
-    id: 'agd-10',
-    veiculoId: '13', // Suzuki GSX-R1000R
+    id: 'agd-6',
+    veiculoId: '6',
     vendedorId: CURRENT_USER,
-    compradorId: 'user456',
-    data: createDate(-3, '11:00'),
-    horario: '11:00',
-    status: STATUS_AGENDAMENTO.CONCLUIDO,
-    createdAt: createDate(-5, '10:00'),
-    updatedAt: createDate(-3, '13:00'),
-    observacoes: 'Visita realizada e avaliada positivamente'
-  },
-  {
-    id: 'agd-checkin-1',
-    veiculoId: '1',
-    vendedorId: 'user123',
     compradorId: CURRENT_USER,
-    data: (() => {
-      // Cria uma data 2 horas no futuro
-      const data = new Date();
-      data.setHours(data.getHours() + 2);
-      return data.toISOString();
-    })(),
+    data: createDate(0, '11:00'), // Hoje, mais cedo
+    horario: '11:00',
+    status: STATUS_AGENDAMENTO.ANDAMENTO,
+    checkInComprador: true,
+    checkInVendedor: true,
+    resultado: null,
+    createdAt: createDate(-1, '11:00'),
+    updatedAt: createDate(0, '11:00'),
+    observacoes: 'Visita em andamento'
+  },
+
+  // Concluído com sucesso
+  {
+    id: 'agd-7',
+    veiculoId: '7',
+    vendedorId: CURRENT_USER,
+    compradorId: CURRENT_USER,
+    data: createDate(-1, '14:00'),
     horario: '14:00',
-    status: STATUS_AGENDAMENTO.AGUARDANDO_CHECKIN,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    observacoes: 'Check-in disponível'
+    status: STATUS_AGENDAMENTO.CONCLUIDO,
+    checkInComprador: true,
+    checkInVendedor: true,
+    resultado: 'realizado',
+    createdAt: createDate(-2, '10:00'),
+    updatedAt: createDate(-1, '16:00'),
+    observacoes: 'Visita realizada com sucesso'
+  },
+
+  // Cancelado pelo comprador
+  {
+    id: 'agd-8',
+    veiculoId: '8',
+    vendedorId: CURRENT_USER,
+    compradorId: CURRENT_USER,
+    data: createDate(1, '09:00'),
+    horario: '09:00',
+    status: STATUS_AGENDAMENTO.CANCELADO,
+    checkInComprador: false,
+    checkInVendedor: false,
+    resultado: 'cancelado',
+    motivoCancelamento: 'Surgiu um imprevisto e não poderei comparecer',
+    createdAt: createDate(-1, '15:00'),
+    updatedAt: createDate(-1, '15:00'),
+    observacoes: 'Desmarcado pelo comprador: Surgiu um imprevisto e não poderei comparecer'
+  },
+
+  // Cancelado pelo vendedor
+  {
+    id: 'agd-9',
+    veiculoId: '9',
+    vendedorId: CURRENT_USER,
+    compradorId: CURRENT_USER,
+    data: createDate(2, '15:00'),
+    horario: '15:00',
+    status: STATUS_AGENDAMENTO.CANCELADO,
+    checkInComprador: false,
+    checkInVendedor: false,
+    resultado: 'cancelado',
+    motivoCancelamento: 'Veículo já foi vendido',
+    createdAt: createDate(-3, '10:00'),
+    updatedAt: createDate(-2, '14:00'),
+    observacoes: 'Desmarcado pelo vendedor: Veículo já foi vendido'
   }
 ]; 

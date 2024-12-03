@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import ConfirmationModal from '@/components/ConfirmationModal';
@@ -207,6 +207,17 @@ export default function MeusAnuncios() {
     </button>
   );
 
+  // Contadores para cada status
+  const contadores = useMemo(() => {
+    const todos = anuncios.length;
+    const rascunhos = anuncios.filter(a => a.status === STATUS_ANUNCIO.RASCUNHO).length;
+    const vendendo = anuncios.filter(a => a.status === STATUS_ANUNCIO.VENDENDO).length;
+    const vendidos = anuncios.filter(a => a.status === STATUS_ANUNCIO.VENDIDO).length;
+    const pausados = anuncios.filter(a => a.status === STATUS_ANUNCIO.PAUSADO).length;
+
+    return { todos, rascunhos, vendendo, vendidos, pausados };
+  }, [anuncios]);
+
   return (
     <main className="w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="flex justify-between items-center mb-6">
@@ -276,24 +287,101 @@ export default function MeusAnuncios() {
         </div>
       )}
 
-      {/* Filtro de Status */}
-      <div className="mb-6">
-        <nav className="flex space-x-4">
-          {filtros
-            .filter(f => f.value !== STATUS_ANUNCIO.RASCUNHO)
-            .map(filtro => (
-              <FilterButton
-                key={filtro.value}
-                label={filtro.label}
-                value={filtro.value}
-                selected={statusFiltro}
-                onClick={setStatusFiltro}
-              />
-            ))}
-        </nav>
+      {/* Filtros */}
+      <div className="my-6">
+        <div className="flex items-center space-x-4 overflow-x-auto pb-2">
+          <span className="text-sm text-gray-400 whitespace-nowrap">Status:</span>
+          <div className="flex space-x-2">
+            <button
+              onClick={() => setStatusFiltro('todos')}
+              className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                statusFiltro === 'todos'
+                  ? 'bg-gray-700 text-white'
+                  : 'text-gray-400 hover:text-white'
+              }`}
+            >
+              <div className="flex items-center space-x-2">
+                <span>Todos</span>
+                {contadores.todos > 0 && (
+                  <span className="bg-gray-600 text-gray-300 text-xs px-1.5 py-0.5 rounded-full">
+                    {contadores.todos}
+                  </span>
+                )}
+              </div>
+            </button>
+            <button
+              onClick={() => setStatusFiltro(STATUS_ANUNCIO.RASCUNHO)}
+              className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                statusFiltro === STATUS_ANUNCIO.RASCUNHO
+                  ? 'bg-gray-700 text-white'
+                  : 'text-gray-400 hover:text-white'
+              }`}
+            >
+              <div className="flex items-center space-x-2">
+                <span>Rascunhos</span>
+                {contadores.rascunhos > 0 && (
+                  <span className="bg-gray-600 text-gray-300 text-xs px-1.5 py-0.5 rounded-full">
+                    {contadores.rascunhos}
+                  </span>
+                )}
+              </div>
+            </button>
+            <button
+              onClick={() => setStatusFiltro(STATUS_ANUNCIO.VENDENDO)}
+              className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                statusFiltro === STATUS_ANUNCIO.VENDENDO
+                  ? 'bg-gray-700 text-white'
+                  : 'text-gray-400 hover:text-white'
+              }`}
+            >
+              <div className="flex items-center space-x-2">
+                <span>Vendendo</span>
+                {contadores.vendendo > 0 && (
+                  <span className="bg-gray-600 text-gray-300 text-xs px-1.5 py-0.5 rounded-full">
+                    {contadores.vendendo}
+                  </span>
+                )}
+              </div>
+            </button>
+            <button
+              onClick={() => setStatusFiltro(STATUS_ANUNCIO.VENDIDO)}
+              className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                statusFiltro === STATUS_ANUNCIO.VENDIDO
+                  ? 'bg-gray-700 text-white'
+                  : 'text-gray-400 hover:text-white'
+              }`}
+            >
+              <div className="flex items-center space-x-2">
+                <span>Vendidos</span>
+                {contadores.vendidos > 0 && (
+                  <span className="bg-gray-600 text-gray-300 text-xs px-1.5 py-0.5 rounded-full">
+                    {contadores.vendidos}
+                  </span>
+                )}
+              </div>
+            </button>
+            <button
+              onClick={() => setStatusFiltro(STATUS_ANUNCIO.PAUSADO)}
+              className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                statusFiltro === STATUS_ANUNCIO.PAUSADO
+                  ? 'bg-gray-700 text-white'
+                  : 'text-gray-400 hover:text-white'
+              }`}
+            >
+              <div className="flex items-center space-x-2">
+                <span>Pausados</span>
+                {contadores.pausados > 0 && (
+                  <span className="bg-gray-600 text-gray-300 text-xs px-1.5 py-0.5 rounded-full">
+                    {contadores.pausados}
+                  </span>
+                )}
+              </div>
+            </button>
+          </div>
+        </div>
       </div>
 
-      {/* Lista de Anncios */}
+      {/* Lista de Anúncios */}
       <div className="bg-gray-800 rounded-xl shadow-lg border border-gray-700 overflow-hidden">
         {/* Tabela para Desktop */}
         <div className="hidden md:block">
