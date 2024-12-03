@@ -10,12 +10,14 @@ import {
   sendPasswordResetEmail
 } from 'firebase/auth';
 import { auth, googleProvider, facebookProvider } from '../config/firebase';
+import { useRouter } from 'next/navigation';
 
 const AuthContext = createContext({});
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -38,8 +40,14 @@ export function AuthProvider({ children }) {
     return () => unsubscribe();
   }, []);
 
-  const login = (email, password) => {
-    return signInWithEmailAndPassword(auth, email, password);
+  const login = async (email, password) => {
+    try {
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      router.push('/');
+      return userCredential;
+    } catch (error) {
+      throw error;
+    }
   };
 
   const register = (email, password) => {
