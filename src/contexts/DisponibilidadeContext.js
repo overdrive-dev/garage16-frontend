@@ -11,15 +11,16 @@ const disponibilidadePadrao = {
   dataUnica: {},
   semanal: {
     dom: { ativo: false, horarios: [] },
-    seg: { ativo: true, horarios: ['09:00'] },
-    ter: { ativo: true, horarios: ['09:00'] },
-    qua: { ativo: true, horarios: ['09:00'] },
-    qui: { ativo: true, horarios: ['09:00'] },
-    sex: { ativo: true, horarios: ['09:00'] },
+    seg: { ativo: false, horarios: [] },
+    ter: { ativo: false, horarios: [] },
+    qua: { ativo: false, horarios: [] },
+    qui: { ativo: false, horarios: [] },
+    sex: { ativo: false, horarios: [] },
     sab: { ativo: false, horarios: [] }
   },
-  personalizada: {
-    numeroSemanas: 1,
+  faixaHorario: {
+    dataInicio: new Date().toISOString().split('T')[0],
+    dataFim: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     horarios: {
       dom: { ativo: false, horarios: [] },
       seg: { ativo: false, horarios: [] },

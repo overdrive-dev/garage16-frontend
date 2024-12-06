@@ -1,123 +1,166 @@
 import { useState } from 'react';
+import { format, parse, startOfDay, addDays } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 import Calendar from '@/components/Calendar';
 import HorarioModal from './HorarioModal';
 
-export default function ConfiguracaoSemanal({ horarios, onChange }) {
+const diasSemana = {
+  dom: 'Domingo',
+  seg: 'Segunda-feira',
+  ter: 'Terça-feira',
+  qua: 'Quarta-feira',
+  qui: 'Quinta-feira',
+  sex: 'Sexta-feira',
+  sab: 'Sábado'
+};
+
+const getDayIndex = (dia) => {
+  const indices = {
+    dom: 0,
+    seg: 1,
+    ter: 2,
+    qua: 3,
+    qui: 4,
+    sex: 5,
+    sab: 6
+  };
+  return indices[dia];
+};
+
+export default function ConfiguracaoSemanal({ horarios = {}, onChange }) {
   const [modalConfig, setModalConfig] = useState({
     isOpen: false,
-    diaId: null,
+    dia: null,
     horarios: []
   });
 
-  const diasSemana = [
-    { id: 'dom', nome: 'Domingo' },
-    { id: 'seg', nome: 'Segunda' },
-    { id: 'ter', nome: 'Terça' },
-    { id: 'qua', nome: 'Quarta' },
-    { id: 'qui', nome: 'Quinta' },
-    { id: 'sex', nome: 'Sexta' },
-    { id: 'sab', nome: 'Sábado' }
-  ];
-
-  const toggleDia = (dia) => {
-    onChange({
-      ...horarios,
-      [dia]: {
-        ...horarios[dia],
-        ativo: !horarios[dia].ativo,
-        horarios: !horarios[dia].ativo ? ['09:00'] : []
-      }
-    });
-  };
-
-  const handleOpenModal = (diaId) => {
+  const handleDiaClick = (dia) => {
     setModalConfig({
       isOpen: true,
-      diaId,
-      horarios: horarios[diaId].horarios || []
+      dia,
+      horarios: horarios[dia]?.horarios || []
     });
   };
 
-  const handleHorarioConfirm = (horariosNovos) => {
-    if (modalConfig.diaId) {
+  const handleHorarioConfirm = (horarioData) => {
+    if (modalConfig.dia) {
+      const { horarios: horariosNovos } = horarioData;
+      
       onChange({
         ...horarios,
-        [modalConfig.diaId]: {
-          ...horarios[modalConfig.diaId],
-          ativo: horariosNovos.length > 0,
-          horarios: horariosNovos
+        [modalConfig.dia]: {
+          horarios: horariosNovos,
+          ativo: horariosNovos.length > 0
         }
       });
     }
-    setModalConfig({ isOpen: false, diaId: null, horarios: [] });
+    setModalConfig({ isOpen: false, dia: null, horarios: [] });
   };
 
   const handleModalClose = () => {
-    setModalConfig({ isOpen: false, diaId: null, horarios: [] });
+    setModalConfig({ isOpen: false, dia: null, horarios: [] });
   };
 
-  const getHorariosForDate = (date) => {
-    const diaSemana = diasSemana.find(d => 
-      d.id === date.toLocaleDateString('pt-BR', { weekday: 'short' }).toLowerCase().replace('.', '')
-    );
+  const handleCalendarSelect = (dates) => {
+    const newHorarios = { ...horarios };
+    
+    // Primeiro, garante que todos os dias existem
+    Object.keys(diasSemana).forEach(dia => {
+      if (!newHorarios[dia]) {
+        newHorarios[dia] = {
+          horarios: [],
+          ativo: false
+        };
+      }
+    });
 
-    if (diaSemana && horarios[diaSemana.id].ativo) {
-      return horarios[diaSemana.id].horarios.join(' - ');
+    // Depois, abre o modal para o dia selecionado
+    const dayIndex = dates[dates.length - 1].getDay();
+    const dia = Object.keys(diasSemana)[dayIndex];
+    handleDiaClick(dia);
+  };
+
+  // Prepara as datas selecionadas para o calendário
+  const selectedDates = Object.entries(horarios)
+    .filter(([_, config]) => config.horarios?.length > 0)
+    .map(([dia]) => {
+      const date = new Date();
+      const dayIndex = getDayIndex(dia);
+      const currentDayIndex = date.getDay();
+      const daysToAdd = (dayIndex - currentDayIndex + 7) % 7;
+      return startOfDay(addDays(date, daysToAdd));
+    });
+
+  const formatHorario = (horario) => {
+    if (typeof horario === 'string') {
+      return horario;
     }
-
-    return 'Indisponível';
+    return horario?.inicio && horario?.fim ? `${horario.inicio} às ${horario.fim}` : '';
   };
 
   return (
-    <div className="space-y-4">
-      {diasSemana.map(({ id, nome }) => (
-        <div key={id} className="flex items-center space-x-4">
-          <div className="w-32">
-            <span className="text-gray-200">{nome}</span>
-          </div>
-          
-          {horarios[id].ativo ? (
-            <>
-              <div className="flex-1">
-                <button
-                  type="button"
-                  onClick={() => handleOpenModal(id)}
-                  className="w-full bg-gray-700 border border-gray-600 text-gray-200 rounded-md px-3 py-2 text-left hover:bg-gray-600 transition-colors"
-                >
-                  {horarios[id].horarios.length > 0 
-                    ? horarios[id].horarios.join(' - ')
-                    : 'Clique para adicionar horários'
-                  }
-                </button>
+    <div className="space-y-6">
+      {/* Calendário */}
+      <div className="bg-gray-800 rounded-lg p-4">
+        <Calendar
+          mode="multiple"
+          selected={selectedDates}
+          onChange={handleCalendarSelect}
+          minDate={startOfDay(new Date())}
+          weekView={true}
+          classNames={{
+            day_selected: "bg-orange-500 text-white hover:bg-orange-600",
+            day_today: "bg-gray-700 text-white",
+          }}
+        />
+      </div>
+
+      {/* Lista de dias */}
+      <div className="space-y-4">
+        {Object.entries(horarios).map(([dia, config = { horarios: [] }]) => (
+          <div key={dia} className={`bg-gray-800 rounded-lg p-4 ${!config.horarios?.length && 'opacity-50'}`}>
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="text-lg font-medium text-gray-100">
+                  {diasSemana[dia]}
+                </h3>
+                <p className="text-sm text-gray-400">
+                  {config.horarios?.length || 0} horário{(config.horarios?.length || 0) !== 1 ? 's' : ''} configurado{(config.horarios?.length || 0) !== 1 ? 's' : ''}
+                </p>
               </div>
-              <button
-                type="button"
-                onClick={() => toggleDia(id)}
-                className="p-2 text-gray-400 hover:text-gray-200"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </>
-          ) : (
-            <button
-              type="button"
-              onClick={() => toggleDia(id)}
-              className="text-orange-500 hover:text-orange-400 text-sm"
+            </div>
+
+            <button 
+              className="w-full bg-gray-700/50 rounded p-4 hover:bg-gray-700/70 text-left"
+              onClick={() => handleDiaClick(dia)}
             >
-              Adicionar horário
+              {config.horarios?.length > 0 ? (
+                <div className="text-gray-200">
+                  {config.horarios.map((horario, index) => (
+                    <span key={index}>
+                      {formatHorario(horario)}
+                      {index < config.horarios.length - 1 && ', '}
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center text-gray-400">
+                  Clique para adicionar horários
+                </div>
+              )}
             </button>
-          )}
-        </div>
-      ))}
+          </div>
+        ))}
+      </div>
 
       <HorarioModal
         isOpen={modalConfig.isOpen}
         onClose={handleModalClose}
         onConfirm={handleHorarioConfirm}
         selectedHorarios={modalConfig.horarios}
-        data={modalConfig.diaId ? new Date() : null}
+        data={modalConfig.dia ? new Date() : null}
+        showReplicacao={false}
+        tipoConfiguracao="semanal"
       />
     </div>
   );

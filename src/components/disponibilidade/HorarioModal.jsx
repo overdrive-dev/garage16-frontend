@@ -9,30 +9,63 @@ export default function HorarioModal({
   onConfirm,
   selectedHorarios = [],
   data,
+  showReplicacao = false,
+  tipoConfiguracao
 }) {
   const [tempHorarios, setTempHorarios] = useState(selectedHorarios);
+  const [replicarHorario, setReplicarHorario] = useState(false);
+  const [tipoReplicacao, setTipoReplicacao] = useState('todos');
+  const [diasSelecionados, setDiasSelecionados] = useState([]);
   
   useEffect(() => {
     if (isOpen) {
       setTempHorarios(selectedHorarios);
+      setReplicarHorario(false);
+      setTipoReplicacao('todos');
+      setDiasSelecionados([]);
     }
   }, [isOpen, selectedHorarios]);
+
+  useEffect(() => {
+    if (tipoConfiguracao === 'unica' && replicarHorario) {
+      setTipoReplicacao('todos');
+    }
+  }, [tipoConfiguracao, replicarHorario]);
 
   const horarios = [
     '09:00', '10:00', '11:00', '12:00', '13:00',
     '14:00', '15:00', '16:00', '17:00'
   ];
 
+  const diasSemana = [
+    { nome: 'Domingo', formato: 'domingo' },
+    { nome: 'Segunda', formato: 'segunda' },
+    { nome: 'Terça', formato: 'terça' },
+    { nome: 'Quarta', formato: 'quarta' },
+    { nome: 'Quinta', formato: 'quinta' },
+    { nome: 'Sexta', formato: 'sexta' },
+    { nome: 'Sábado', formato: 'sábado' }
+  ];
+
   const toggleHorario = (horario) => {
-    setTempHorarios(prev => 
-      prev.includes(horario)
-        ? prev.filter(h => h !== horario)
-        : [...prev, horario].sort()
+    const horarios = Array.isArray(tempHorarios) ? tempHorarios : tempHorarios?.horarios || [];
+    setTempHorarios(
+      horarios.includes(horario)
+        ? horarios.filter(h => h !== horario)
+        : [...horarios, horario].sort()
     );
   };
 
   const handleConfirm = () => {
-    onConfirm(tempHorarios);
+    const horariosFinal = Array.isArray(tempHorarios) ? tempHorarios : tempHorarios?.horarios || [];
+    
+    onConfirm({
+      horarios: horariosFinal,
+      replicar: replicarHorario ? {
+        tipo: tipoReplicacao,
+        dias: tipoReplicacao === 'todos' ? [] : diasSelecionados.map(dia => diasSemana.find(d => d.nome === dia).formato)
+      } : null
+    });
     onClose();
   };
 
@@ -42,7 +75,7 @@ export default function HorarioModal({
   };
 
   const handleDesmarcar = () => {
-    onConfirm([]); // Envia array vazio para remover a data
+    onConfirm({ horarios: [], replicar: null }); // Envia array vazio para remover a data
     onClose();
   };
 
@@ -99,6 +132,138 @@ export default function HorarioModal({
                     </button>
                   ))}
                 </div>
+
+                {showReplicacao && tempHorarios.length > 0 && (
+                  <div className="mt-6 space-y-4 border-t border-gray-700 pt-4">
+                    {tipoConfiguracao === 'unica' ? (
+                      <div 
+                        className="flex items-center bg-gray-700/50 p-3 rounded-lg hover:bg-gray-700/70 transition-colors cursor-pointer" 
+                        onClick={() => {
+                          const novoValor = !replicarHorario;
+                          setReplicarHorario(novoValor);
+                          if (novoValor) {
+                            setTipoReplicacao('todos');
+                          }
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          id="replicarHorario"
+                          checked={replicarHorario}
+                          onChange={() => {
+                            const novoValor = !replicarHorario;
+                            setReplicarHorario(novoValor);
+                            if (novoValor) {
+                              setTipoReplicacao('todos');
+                            }
+                          }}
+                          onClick={(e) => e.stopPropagation()}
+                          className="h-4 w-4 rounded border-gray-600 bg-gray-700 text-orange-500 focus:ring-orange-500 focus:ring-offset-gray-800"
+                        />
+                        <label 
+                          htmlFor="replicarHorario" 
+                          className="ml-2 text-sm text-gray-200 cursor-pointer select-none flex-1"
+                          onClick={(e) => e.preventDefault()}
+                        >
+                          Replicar este horário para os outros dias selecionados
+                        </label>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="flex items-center bg-gray-700/50 p-3 rounded-lg hover:bg-gray-700/70 transition-colors cursor-pointer" onClick={() => setReplicarHorario(!replicarHorario)}>
+                          <input
+                            type="checkbox"
+                            id="replicarHorario"
+                            checked={replicarHorario}
+                            onChange={(e) => setReplicarHorario(e.target.checked)}
+                            className="h-4 w-4 rounded border-gray-600 bg-gray-700 text-orange-500 focus:ring-orange-500 focus:ring-offset-gray-800"
+                          />
+                          <label htmlFor="replicarHorario" className="ml-2 text-sm text-gray-200 cursor-pointer select-none">
+                            Replicar este horário para outros dias
+                          </label>
+                        </div>
+
+                        {replicarHorario && (
+                          <div className="ml-2 space-y-4 animate-fadeIn">
+                            <div className="bg-gray-700/30 p-4 rounded-lg space-y-3">
+                              <div className="flex items-center space-x-6">
+                                <div 
+                                  className={`flex items-center p-2 rounded-md cursor-pointer transition-colors ${tipoReplicacao === 'todos' ? 'bg-gray-600/50' : 'hover:bg-gray-700/50'}`}
+                                  onClick={() => setTipoReplicacao('todos')}
+                                >
+                                  <input
+                                    type="radio"
+                                    id="todosDias"
+                                    name="tipoReplicacao"
+                                    value="todos"
+                                    checked={tipoReplicacao === 'todos'}
+                                    onChange={(e) => setTipoReplicacao(e.target.value)}
+                                    className="h-4 w-4 border-gray-600 bg-gray-700 text-orange-500 focus:ring-orange-500 focus:ring-offset-gray-800"
+                                  />
+                                  <label htmlFor="todosDias" className="ml-2 text-sm text-gray-200 cursor-pointer select-none">
+                                    Todos os dias
+                                  </label>
+                                </div>
+                                <div 
+                                  className={`flex items-center p-2 rounded-md cursor-pointer transition-colors ${tipoReplicacao === 'especificos' ? 'bg-gray-600/50' : 'hover:bg-gray-700/50'}`}
+                                  onClick={() => setTipoReplicacao('especificos')}
+                                >
+                                  <input
+                                    type="radio"
+                                    id="diasEspecificos"
+                                    name="tipoReplicacao"
+                                    value="especificos"
+                                    checked={tipoReplicacao === 'especificos'}
+                                    onChange={(e) => setTipoReplicacao(e.target.value)}
+                                    className="h-4 w-4 border-gray-600 bg-gray-700 text-orange-500 focus:ring-orange-500 focus:ring-offset-gray-800"
+                                  />
+                                  <label htmlFor="diasEspecificos" className="ml-2 text-sm text-gray-200 cursor-pointer select-none">
+                                    Dias específicos
+                                  </label>
+                                </div>
+                              </div>
+
+                              {tipoReplicacao === 'especificos' && (
+                                <div className="grid grid-cols-2 gap-3 pt-2 animate-fadeIn">
+                                  {diasSemana.map(({ nome }) => (
+                                    <div 
+                                      key={nome}
+                                      className={`flex items-center p-2 rounded-md cursor-pointer transition-colors ${diasSelecionados.includes(nome) ? 'bg-gray-600/50' : 'hover:bg-gray-700/50'}`}
+                                      onClick={() => {
+                                        if (diasSelecionados.includes(nome)) {
+                                          setDiasSelecionados(diasSelecionados.filter(d => d !== nome));
+                                        } else {
+                                          setDiasSelecionados([...diasSelecionados, nome]);
+                                        }
+                                      }}
+                                    >
+                                      <input
+                                        type="checkbox"
+                                        id={`dia-${nome}`}
+                                        checked={diasSelecionados.includes(nome)}
+                                        onChange={(e) => {
+                                          if (e.target.checked) {
+                                            setDiasSelecionados([...diasSelecionados, nome]);
+                                          } else {
+                                            setDiasSelecionados(diasSelecionados.filter(d => d !== nome));
+                                          }
+                                        }}
+                                        className="h-4 w-4 rounded border-gray-600 bg-gray-700 text-orange-500 focus:ring-orange-500 focus:ring-offset-gray-800"
+                                      />
+                                      <label htmlFor={`dia-${nome}`} className="ml-2 text-sm text-gray-200 cursor-pointer select-none">
+                                        {nome}
+                                      </label>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                )}
 
                 <div className="mt-6 flex items-center justify-between">
                   {/* Lado esquerdo - Botão de desmarcar */}

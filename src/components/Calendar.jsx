@@ -1,133 +1,229 @@
 'use client'
 
 import { useState } from 'react';
-import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, isToday, addMonths, subMonths } from 'date-fns';
+import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
+import {
+  add,
+  eachDayOfInterval,
+  endOfMonth,
+  format,
+  getDay,
+  isSameDay,
+  isSameMonth,
+  isToday,
+  parse,
+  startOfToday,
+  startOfWeek,
+  endOfWeek,
+  startOfMonth,
+  isWithinInterval,
+  startOfDay,
+  isBefore,
+  isAfter
+} from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Popover } from '@headlessui/react';
 
-export default function Calendar({ selectedDate, onChange, disabledDates = [], getHorariosForDate, tileClassName }) {
-  const [currentMonth, setCurrentMonth] = useState(new Date());
+function classNames(...classes) {
+  return classes.filter(Boolean).join(' ');
+}
 
-  const monthStart = startOfMonth(currentMonth);
-  const monthEnd = endOfMonth(monthStart);
-  const calendarStart = startOfWeek(monthStart);
-  const calendarEnd = endOfWeek(monthEnd);
+export default function Calendar({ 
+  mode = 'single',
+  selected = null,
+  onChange,
+  minDate,
+  maxDate,
+  disabledDates = [],
+  classNames: customClassNames = {},
+  defaultMonth = new Date(),
+  weekView = false
+}) {
+  const [currentMonth, setCurrentMonth] = useState(defaultMonth);
+  const firstDayCurrentMonth = startOfMonth(currentMonth);
 
-  const days = eachDayOfInterval({ start: calendarStart, end: calendarEnd });
-  const weekDays = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
+  const days = eachDayOfInterval({
+    start: startOfWeek(firstDayCurrentMonth, { locale: ptBR }),
+    end: endOfWeek(endOfMonth(firstDayCurrentMonth), { locale: ptBR }),
+  });
 
-  const nextMonth = (e) => {
-    e.preventDefault();
-    setCurrentMonth(addMonths(currentMonth, 1));
+  const previousMonth = () => {
+    setCurrentMonth(add(firstDayCurrentMonth, { months: -1 }));
   };
 
-  const prevMonth = (e) => {
-    e.preventDefault();
-    setCurrentMonth(subMonths(currentMonth, 1));
+  const nextMonth = () => {
+    setCurrentMonth(add(firstDayCurrentMonth, { months: 1 }));
+  };
+
+  const isDateSelected = (date) => {
+    if (!selected) return false;
+    
+    if (mode === 'single') {
+      return isSameDay(date, selected);
+    }
+    
+    if (mode === 'multiple') {
+      if (weekView) {
+        // No modo semanal, verifica se o dia da semana está selecionado
+        return selected.some(selectedDate => getDay(selectedDate) === getDay(date));
+      }
+      return selected.some(selectedDate => isSameDay(date, selectedDate));
+    }
+    
+    if (mode === 'range' && selected.from && selected.to) {
+      return isWithinInterval(date, { 
+        start: startOfDay(selected.from), 
+        end: startOfDay(selected.to) 
+      });
+    }
+
+    if (mode === 'range' && selected.from) {
+      return isSameDay(date, selected.from);
+    }
+    
+    return false;
+  };
+
+  const isDateDisabled = (date) => {
+    // Verifica data mínima
+    if (minDate && isBefore(date, startOfDay(minDate))) {
+      return true;
+    }
+
+    // Verifica data máxima
+    if (maxDate && isAfter(date, startOfDay(maxDate))) {
+      return true;
+    }
+
+    // Verifica datas desabilitadas específicas
+    return disabledDates.some(disabledDate => isSameDay(date, disabledDate));
+  };
+
+  const handleDateClick = (date) => {
+    if (isDateDisabled(date)) return;
+
+    if (mode === 'single') {
+      onChange(date);
+    } else if (mode === 'multiple') {
+      const currentSelected = selected || [];
+      
+      if (weekView) {
+        // No modo semanal, seleciona/deseleciona o dia da semana
+        const dayOfWeek = getDay(date);
+        const hasDay = currentSelected.some(d => getDay(d) === dayOfWeek);
+        
+        if (hasDay) {
+          onChange(currentSelected.filter(d => getDay(d) !== dayOfWeek));
+        } else {
+          onChange([...currentSelected, date]);
+        }
+      } else {
+        const dateExists = currentSelected.find(d => isSameDay(d, date));
+        
+        if (dateExists) {
+          onChange(currentSelected.filter(d => !isSameDay(d, date)));
+        } else {
+          onChange([...currentSelected, date]);
+        }
+      }
+    } else if (mode === 'range') {
+      if (!selected?.from || (selected.from && selected.to)) {
+        onChange({ from: date, to: null });
+      } else {
+        const { from } = selected;
+        if (isBefore(date, from)) {
+          onChange({ from: date, to: from });
+        } else {
+          onChange({ from, to: date });
+        }
+      }
+    }
   };
 
   return (
-    <div className="w-full bg-gray-900 p-4 rounded-lg">
-      {/* Cabeçalho do Calendário */}
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-base font-semibold text-gray-100 capitalize">
-          {format(currentMonth, 'MMMM yyyy', { locale: ptBR })}
+    <div className="select-none">
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="font-semibold text-gray-200">
+          {format(firstDayCurrentMonth, 'MMMM yyyy', { locale: ptBR })}
         </h2>
         <div className="flex items-center space-x-2">
           <button
             type="button"
-            onClick={prevMonth}
-            className="p-1.5 hover:bg-gray-800 rounded-full transition-colors"
+            onClick={previousMonth}
+            className="p-2 text-gray-400 hover:text-gray-300 transition-colors"
           >
-            <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
+            <ChevronLeftIcon className="w-5 h-5" />
           </button>
           <button
             type="button"
             onClick={nextMonth}
-            className="p-1.5 hover:bg-gray-800 rounded-full transition-colors"
+            className="p-2 text-gray-400 hover:text-gray-300 transition-colors"
           >
-            <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
+            <ChevronRightIcon className="w-5 h-5" />
           </button>
         </div>
       </div>
 
-      {/* Grade do Calendário */}
-      <div className="grid grid-cols-7 text-center gap-1">
-        {/* Dias da Semana */}
-        {weekDays.map((day, idx) => (
-          <div key={idx} className="text-xs text-gray-400 font-medium py-2">
-            {day}
-          </div>
-        ))}
+      <div className="grid grid-cols-7 text-center text-xs leading-6 text-gray-400 mb-2">
+        <div>Dom</div>
+        <div>Seg</div>
+        <div>Ter</div>
+        <div>Qua</div>
+        <div>Qui</div>
+        <div>Sex</div>
+        <div>Sáb</div>
+      </div>
 
-        {/* Dias do Mês */}
+      <div className="grid grid-cols-7 text-sm gap-px bg-gray-700/50 rounded-lg overflow-hidden">
         {days.map((day, dayIdx) => {
-          const isSelected = selectedDate && isSameDay(day, selectedDate);
-          const isDisabled = disabledDates.some(disabledDate => 
-            isSameDay(new Date(disabledDate), day)
-          );
-          const isDayToday = isToday(day);
+          const isSelected = isDateSelected(day);
+          const isDisabled = isDateDisabled(day);
           const isCurrentMonth = isSameMonth(day, currentMonth);
-
-          const baseClasses = `
-            w-full h-10 focus:outline-none relative group
-            ${!isCurrentMonth ? 'text-gray-600' : 'text-gray-100'}
-            ${isDisabled ? 'cursor-not-allowed opacity-50' : ''}
-          `;
-
+          const isRangeStart = mode === 'range' && selected?.from && isSameDay(day, selected.from);
+          const isRangeEnd = mode === 'range' && selected?.to && isSameDay(day, selected.to);
+          const isInRange = mode === 'range' && selected?.from && selected?.to && 
+            isWithinInterval(day, { start: selected.from, end: selected.to });
+          
           return (
-            <div key={dayIdx} className="relative">
-              <button
-                disabled={isDisabled}
-                className={baseClasses}
-                onClick={(e) => {
-                  e.preventDefault();
-                  if (!isDisabled) {
-                    onChange(day);
-                  }
-                }}
+            <div
+              key={day.toString()}
+              className={classNames(
+                dayIdx === 0 && colStartClasses[getDay(day)],
+                'relative bg-gray-800 py-3',
+                !isCurrentMonth && 'opacity-50',
+                isDisabled && 'cursor-not-allowed opacity-50',
+                !isDisabled && 'cursor-pointer hover:bg-gray-700 transition-colors',
+                isInRange && !isRangeStart && !isRangeEnd && 'bg-orange-500/20'
+              )}
+              onClick={() => !isDisabled && handleDateClick(day)}
+            >
+              <time
+                dateTime={format(day, 'yyyy-MM-dd')}
+                className={classNames(
+                  'mx-auto flex h-7 w-7 items-center justify-center rounded-full transition-colors',
+                  isSelected && (customClassNames.day_selected || 'bg-orange-500 text-white'),
+                  !isSelected && isToday(day) && (customClassNames.day_today || 'text-orange-500'),
+                  !isSelected && !isToday(day) && isCurrentMonth && 'text-gray-200',
+                  !isSelected && !isToday(day) && !isCurrentMonth && 'text-gray-400',
+                  isRangeStart && 'bg-orange-500 text-white',
+                  isRangeEnd && 'bg-orange-500 text-white'
+                )}
               >
-                <div className={tileClassName({ date: day, view: 'month' })}>
-                  <time
-                    dateTime={format(day, 'yyyy-MM-dd')}
-                    className={`
-                      relative z-10
-                      mx-auto flex h-full w-8 items-center justify-center
-                      ${isDayToday ? 'font-bold text-orange-400' : ''}
-                      ${isSelected ? 'font-bold' : ''}
-                    `}
-                  >
-                    {format(day, 'd')}
-                  </time>
-                </div>
-
-                {/* Tooltip */}
-                <div className="
-                  invisible group-hover:visible opacity-0 group-hover:opacity-100
-                  transition-all duration-200
-                  absolute z-50 bottom-full left-1/2 -translate-x-1/2 mb-2
-                  bg-gray-800 text-gray-100 px-4 py-2 rounded-lg shadow-lg text-sm
-                  min-w-[200px] pointer-events-none
-                ">
-                  <div className="font-medium">
-                    {format(day, "dd 'de' MMMM", { locale: ptBR })}
-                  </div>
-                  <div className="text-gray-300 mt-1">
-                    {getHorariosForDate(day)}
-                  </div>
-                  <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-full">
-                    <div className="border-8 border-transparent border-t-gray-800" />
-                  </div>
-                </div>
-              </button>
+                {format(day, 'd')}
+              </time>
             </div>
           );
         })}
       </div>
     </div>
   );
-} 
+}
+
+const colStartClasses = [
+  '',
+  'col-start-2',
+  'col-start-3',
+  'col-start-4',
+  'col-start-5',
+  'col-start-6',
+  'col-start-7',
+]; 
