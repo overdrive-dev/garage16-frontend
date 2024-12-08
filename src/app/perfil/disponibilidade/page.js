@@ -5,8 +5,8 @@ import { useRouter } from 'next/navigation';
 import { Dialog } from '@headlessui/react';
 import { useDisponibilidade } from '@/contexts/DisponibilidadeContext';
 import DataUnicaConfig from '@/components/disponibilidade/DataUnicaConfig';
-import ConfiguracaoSemanal from '@/components/disponibilidade/ConfiguracaoSemanal';
-import ConfiguracaoFaixaHorario from '@/components/disponibilidade/ConfiguracaoFaixaHorario';
+import SemanalConfig from '@/components/disponibilidade/SemanalConfig';
+import PeriodoConfig from '@/components/disponibilidade/PeriodoConfig';
 
 const estadoInicial = {
   tipo: 'unica',
@@ -163,7 +163,7 @@ export default function DisponibilidadePage() {
             )}
 
             {currentConfig.tipo === 'semanal' && (
-              <ConfiguracaoSemanal 
+              <SemanalConfig 
                 horarios={currentConfig.semanal}
                 onChange={(updates) => {
                   setCurrentConfig(prev => ({
@@ -175,7 +175,7 @@ export default function DisponibilidadePage() {
             )}
 
             {currentConfig.tipo === 'faixaHorario' && (
-              <ConfiguracaoFaixaHorario 
+              <PeriodoConfig 
                 config={currentConfig.faixaHorario}
                 onChange={(updates) => {
                   setCurrentConfig(prev => ({

@@ -4,6 +4,8 @@ import VehicleCard from '@/components/VehicleCard';
 import { mockAnuncios, STATUS_ANUNCIO } from '@/mocks/anuncios';
 import Link from 'next/link';
 
+
+
 const MINI_BANNERS = [
   {
     id: 'sport',
@@ -62,6 +64,8 @@ export default function Home() {
 
   return (
     <main className="w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-12">
+
+    
       {/* Mini Banners */}
       <section>
         <h2 className="text-2xl font-bold text-white mb-6">Categorias</h2>

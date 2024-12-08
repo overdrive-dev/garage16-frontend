@@ -36,14 +36,16 @@ export default function Calendar({
   disabledDates = [],
   classNames: customClassNames = {},
   defaultMonth = new Date(),
-  weekView = false
+  weekView = false,
+  onDayMouseEnter,
+  onDayMouseLeave
 }) {
   const [currentMonth, setCurrentMonth] = useState(defaultMonth);
   const firstDayCurrentMonth = startOfMonth(currentMonth);
 
   const days = eachDayOfInterval({
     start: startOfWeek(firstDayCurrentMonth, { locale: ptBR }),
-    end: endOfWeek(endOfMonth(firstDayCurrentMonth), { locale: ptBR }),
+    end: endOfWeek(endOfMonth(currentMonth), { locale: ptBR }),
   });
 
   const previousMonth = () => {
@@ -63,8 +65,15 @@ export default function Calendar({
     
     if (mode === 'multiple') {
       if (weekView) {
-        // No modo semanal, verifica se o dia da semana está selecionado
-        return selected.some(selectedDate => getDay(selectedDate) === getDay(date));
+        // No modo semanal, verifica se existe uma data selecionada para este dia da semana
+        // E se a data é futura
+        return selected.some(selectedDate => {
+          const normalizedDate = startOfDay(selectedDate);
+          const normalizedCurrent = startOfDay(date);
+          const isSameWeekday = getDay(normalizedDate) === getDay(normalizedCurrent);
+          const isFutureDate = isAfter(normalizedCurrent, startOfDay(new Date()));
+          return isSameWeekday && isFutureDate;
+        });
       }
       return selected.some(selectedDate => isSameDay(date, selectedDate));
     }
@@ -107,23 +116,11 @@ export default function Calendar({
       const currentSelected = selected || [];
       
       if (weekView) {
-        // No modo semanal, seleciona/deseleciona o dia da semana
-        const dayOfWeek = getDay(date);
-        const hasDay = currentSelected.some(d => getDay(d) === dayOfWeek);
-        
-        if (hasDay) {
-          onChange(currentSelected.filter(d => getDay(d) !== dayOfWeek));
-        } else {
-          onChange([...currentSelected, date]);
-        }
+        // No modo semanal, sempre passa a data clicada
+        onChange([date]);
       } else {
-        const dateExists = currentSelected.find(d => isSameDay(d, date));
-        
-        if (dateExists) {
-          onChange(currentSelected.filter(d => !isSameDay(d, date)));
-        } else {
-          onChange([...currentSelected, date]);
-        }
+        // Em vez de remover a data quando clicada novamente, sempre chama onChange
+        onChange([date]);
       }
     } else if (mode === 'range') {
       if (!selected?.from || (selected.from && selected.to)) {
@@ -182,26 +179,31 @@ export default function Calendar({
           const isRangeEnd = mode === 'range' && selected?.to && isSameDay(day, selected.to);
           const isInRange = mode === 'range' && selected?.from && selected?.to && 
             isWithinInterval(day, { start: selected.from, end: selected.to });
+          const matchesHovered = customClassNames.day_matches_hovered ? customClassNames.day_matches_hovered(day) : false;
           
           return (
             <div
               key={day.toString()}
               className={classNames(
                 dayIdx === 0 && colStartClasses[getDay(day)],
-                'relative bg-gray-800 py-3',
-                !isCurrentMonth && 'opacity-50',
+                'relative py-3',
+                !isCurrentMonth && '',
                 isDisabled && 'cursor-not-allowed opacity-50',
-                !isDisabled && 'cursor-pointer hover:bg-gray-700 transition-colors',
-                isInRange && !isRangeStart && !isRangeEnd && 'bg-orange-500/20'
+                !isDisabled && 'cursor-pointer transition-colors',
+                isInRange && !isRangeStart && !isRangeEnd && 'bg-orange-500/20',
+                matchesHovered ? 'bg-gray-700' : 'bg-gray-800',
+                'hover:!bg-gray-700'
               )}
               onClick={() => !isDisabled && handleDateClick(day)}
+              onMouseEnter={() => !isDisabled && onDayMouseEnter?.(day)}
+              onMouseLeave={onDayMouseLeave}
             >
               <time
                 dateTime={format(day, 'yyyy-MM-dd')}
                 className={classNames(
                   'mx-auto flex h-7 w-7 items-center justify-center rounded-full transition-colors',
                   isSelected && (customClassNames.day_selected || 'bg-orange-500 text-white'),
-                  !isSelected && isToday(day) && (customClassNames.day_today || 'text-orange-500'),
+                  !isSelected && isToday(day) && (customClassNames.day_today || 'bg-gray-700 text-white'),
                   !isSelected && !isToday(day) && isCurrentMonth && 'text-gray-200',
                   !isSelected && !isToday(day) && !isCurrentMonth && 'text-gray-400',
                   isRangeStart && 'bg-orange-500 text-white',

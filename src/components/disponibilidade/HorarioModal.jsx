@@ -17,6 +17,9 @@ export default function HorarioModal({
   const [tipoReplicacao, setTipoReplicacao] = useState('todos');
   const [diasSelecionados, setDiasSelecionados] = useState([]);
   
+  // Estado derivado para controlar a visibilidade da replicação
+  const deveExibirReplicacao = showReplicacao && tempHorarios.length > 0;
+
   useEffect(() => {
     if (isOpen) {
       setTempHorarios(selectedHorarios);
@@ -25,12 +28,6 @@ export default function HorarioModal({
       setDiasSelecionados([]);
     }
   }, [isOpen, selectedHorarios]);
-
-  useEffect(() => {
-    if (tipoConfiguracao === 'unica' && replicarHorario) {
-      setTipoReplicacao('todos');
-    }
-  }, [tipoConfiguracao, replicarHorario]);
 
   const horarios = [
     '09:00', '10:00', '11:00', '12:00', '13:00',
@@ -62,8 +59,8 @@ export default function HorarioModal({
     onConfirm({
       horarios: horariosFinal,
       replicar: replicarHorario ? {
-        tipo: tipoReplicacao,
-        dias: tipoReplicacao === 'todos' ? [] : diasSelecionados.map(dia => diasSemana.find(d => d.nome === dia).formato)
+        tipo: 'todos',
+        dias: []
       } : null
     });
     onClose();
@@ -77,6 +74,13 @@ export default function HorarioModal({
   const handleDesmarcar = () => {
     onConfirm({ horarios: [], replicar: null }); // Envia array vazio para remover a data
     onClose();
+  };
+
+  const formatDate = (date) => {
+    if (!date) return '';
+    if (tipoConfiguracao === 'semanal') return date; // Se for semanal, date já é o nome do dia
+    if (isNaN(date.getTime())) return 'Data inválida';
+    return format(date, "dd/MM/yyyy", { locale: ptBR });
   };
 
   return (
@@ -111,7 +115,7 @@ export default function HorarioModal({
                 </Dialog.Title>
                 {data && (
                   <p className="text-gray-400 text-sm mb-4">
-                    {format(data, "EEEE, dd 'de' MMMM", { locale: ptBR })}
+                    {formatDate(data)}
                   </p>
                 )}
 
@@ -133,44 +137,14 @@ export default function HorarioModal({
                   ))}
                 </div>
 
-                {showReplicacao && tempHorarios.length > 0 && (
+                {deveExibirReplicacao && (
                   <div className="mt-6 space-y-4 border-t border-gray-700 pt-4">
-                    {tipoConfiguracao === 'unica' ? (
-                      <div 
-                        className="flex items-center bg-gray-700/50 p-3 rounded-lg hover:bg-gray-700/70 transition-colors cursor-pointer" 
-                        onClick={() => {
-                          const novoValor = !replicarHorario;
-                          setReplicarHorario(novoValor);
-                          if (novoValor) {
-                            setTipoReplicacao('todos');
-                          }
-                        }}
-                      >
-                        <input
-                          type="checkbox"
-                          id="replicarHorario"
-                          checked={replicarHorario}
-                          onChange={() => {
-                            const novoValor = !replicarHorario;
-                            setReplicarHorario(novoValor);
-                            if (novoValor) {
-                              setTipoReplicacao('todos');
-                            }
-                          }}
-                          onClick={(e) => e.stopPropagation()}
-                          className="h-4 w-4 rounded border-gray-600 bg-gray-700 text-orange-500 focus:ring-orange-500 focus:ring-offset-gray-800"
-                        />
-                        <label 
-                          htmlFor="replicarHorario" 
-                          className="ml-2 text-sm text-gray-200 cursor-pointer select-none flex-1"
-                          onClick={(e) => e.preventDefault()}
-                        >
-                          Replicar este horário para os outros dias selecionados
-                        </label>
-                      </div>
-                    ) : (
+                    {tipoConfiguracao === 'faixaHorario' ? (
                       <>
-                        <div className="flex items-center bg-gray-700/50 p-3 rounded-lg hover:bg-gray-700/70 transition-colors cursor-pointer" onClick={() => setReplicarHorario(!replicarHorario)}>
+                        <div 
+                          className="flex items-center bg-gray-700/50 p-3 rounded-lg hover:bg-gray-700/70 transition-colors cursor-pointer"
+                          onClick={() => setReplicarHorario(!replicarHorario)}
+                        >
                           <input
                             type="checkbox"
                             id="replicarHorario"
@@ -261,6 +235,39 @@ export default function HorarioModal({
                           </div>
                         )}
                       </>
+                    ) : (
+                      <div 
+                        className="flex items-center bg-gray-700/50 p-3 rounded-lg hover:bg-gray-700/70 transition-colors cursor-pointer"
+                        onClick={() => {
+                          const novoValor = !replicarHorario;
+                          setReplicarHorario(novoValor);
+                          if (novoValor) {
+                            setTipoReplicacao('todos');
+                          }
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          id="replicarHorario"
+                          checked={replicarHorario}
+                          onChange={() => {
+                            const novoValor = !replicarHorario;
+                            setReplicarHorario(novoValor);
+                            if (novoValor) {
+                              setTipoReplicacao('todos');
+                            }
+                          }}
+                          onClick={(e) => e.stopPropagation()}
+                          className="h-4 w-4 rounded border-gray-600 bg-gray-700 text-orange-500 focus:ring-orange-500 focus:ring-offset-gray-800"
+                        />
+                        <label 
+                          htmlFor="replicarHorario"
+                          className="ml-2 text-sm text-gray-200 cursor-pointer select-none flex-1"
+                          onClick={(e) => e.preventDefault()}
+                        >
+                          Replicar este horário para todos os dias selecionados
+                        </label>
+                      </div>
                     )}
                   </div>
                 )}

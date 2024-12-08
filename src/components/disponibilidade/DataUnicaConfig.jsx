@@ -1,26 +1,82 @@
 import { useState } from 'react';
-import { format, parse, startOfDay, addDays } from 'date-fns';
+import { format, parse, startOfDay, addDays, isAfter } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import HorarioModal from './HorarioModal';
 import Calendar from '@/components/Calendar';
 import { TrashIcon } from '@heroicons/react/24/outline';
 
-export default function DataUnicaConfig({ datas = {}, onChange }) {
+export default function DataUnicaConfig({ datas = {}, onChange, isWeekly = false }) {
   const [modalConfig, setModalConfig] = useState({
     isOpen: false,
     dateKey: null,
     horarios: []
   });
 
+  const [hoveredWeekday, setHoveredWeekday] = useState(null);
+
+  // Função isolada para verificar se deve mostrar replicação
+  const verificarReplicacao = (dataAtual) => {
+    console.log('\n=== Verificação de Replicação (Data Única) ===');
+    console.log('Data sendo verificada:', dataAtual);
+    console.log('Estado atual das datas:', datas);
+
+    // Verifica se a data atual tem horários configurados (está editando)
+    const horariosDaData = datas[dataAtual];
+    console.log('Horários da data atual:', horariosDaData);
+    
+    const estaEditando = horariosDaData && horariosDaData.length > 0;
+    console.log('Está editando?', estaEditando);
+
+    // Conta quantas datas configuradas existem (excluindo a data atual)
+    const datasConfiguradas = Object.entries(datas || {})
+      .filter(([data, horarios]) => data !== dataAtual && horarios && horarios.length > 0);
+    
+    console.log('Datas configuradas (excluindo atual):', datasConfiguradas);
+    console.log('Quantidade de datas configuradas:', datasConfiguradas.length);
+
+    // Se estiver editando, usa os horários existentes, senão usa os horários do modal
+    const horariosSelecionados = estaEditando ? horariosDaData : [];
+    console.log('Horários considerados:', horariosSelecionados);
+
+    // Deve exibir replicação se houver outras datas configuradas
+    const deveExibirReplicacao = datasConfiguradas.length > 0;
+    console.log('Deve exibir replicação?', deveExibirReplicacao);
+    console.log('Motivo:', deveExibirReplicacao 
+      ? 'Existem outras datas configuradas' 
+      : 'Não existem outras datas configuradas');
+    console.log('=====================================\n');
+    
+    return deveExibirReplicacao;
+  };
+
   const handleDateClick = (date) => {
+    console.log('\n=== Clique na Data ===');
+    console.log('Data clicada:', date);
+    
     // Ajusta para o fuso horário local
     const localDate = addDays(startOfDay(date), 1);
     const dateStr = localDate.toISOString().split('T')[0];
+    console.log('Data ajustada:', dateStr);
+    
     const horarios = datas?.[dateStr] || [];
+    console.log('Horários existentes:', horarios);
+    
+    const showReplicacao = verificarReplicacao(dateStr);
+    console.log('Mostrar replicação?', showReplicacao);
+
+    console.log('Configurando modal com:', {
+      isOpen: true,
+      dateKey: dateStr,
+      horarios,
+      showReplicacao
+    });
+    console.log('===================\n');
+
     setModalConfig({
       isOpen: true,
       dateKey: dateStr,
-      horarios
+      horarios,
+      showReplicacao
     });
   };
 
@@ -28,27 +84,46 @@ export default function DataUnicaConfig({ datas = {}, onChange }) {
     if (modalConfig.dateKey) {
       const { horarios: horariosNovos, replicar } = horarioData;
       
+      // Se não houver horários, remove a data
       if (!horariosNovos || horariosNovos.length === 0) {
-        const { [modalConfig.dateKey]: removed, ...rest } = datas || {};
-        onChange(rest);
-      } else {
-        // Cria um novo objeto para armazenar todas as datas
+        console.log('Removendo data:', modalConfig.dateKey);
         const novasDatas = { ...datas };
+        delete novasDatas[modalConfig.dateKey];
+        onChange(novasDatas);
+        setModalConfig({ isOpen: false, dateKey: null, horarios: [] });
+        return;
+      }
 
-        // Adiciona os horários à data atual
-        novasDatas[modalConfig.dateKey] = horariosNovos;
+      // Cria um novo objeto para armazenar todas as datas
+      const novasDatas = { ...datas };
 
-        // Se houver replicação e mais de um dia ativo, replica para os outros dias
-        if (replicar?.tipo === 'todos') {
-          Object.keys(datas || {}).forEach(data => {
+      // Adiciona os horários à data atual
+      novasDatas[modalConfig.dateKey] = horariosNovos;
+
+      // Se houver replicação, aplica de acordo com o tipo de configuração
+      if (replicar?.tipo === 'todos') {
+        if (isWeekly) {
+          // No modo semanal, replica apenas para dias já configurados
+          console.log('Replicando horários no modo semanal');
+          console.log('Dias já configurados:', Object.keys(datas));
+          
+          Object.keys(datas).forEach(data => {
+            if (data !== modalConfig.dateKey && datas[data]?.length > 0) {
+              console.log('Replicando para:', data);
+              novasDatas[data] = horariosNovos;
+            }
+          });
+        } else {
+          // Para outros modos (data única/período), mantém a lógica original
+          Object.keys(datas).forEach(data => {
             if (data !== modalConfig.dateKey) {
               novasDatas[data] = horariosNovos;
             }
           });
         }
-
-        onChange(novasDatas);
       }
+
+      onChange(novasDatas);
     }
     setModalConfig({ isOpen: false, dateKey: null, horarios: [] });
   };
@@ -58,41 +133,22 @@ export default function DataUnicaConfig({ datas = {}, onChange }) {
   };
 
   const handleCalendarSelect = (dates) => {
-    // Converte as datas para o formato correto e mantém os horários existentes
-    const newDatas = {};
-    
-    // Primeiro, copia todas as datas existentes que ainda estão selecionadas
-    Object.entries(datas || {}).forEach(([data, horarios]) => {
-      const selectedDate = dates.some(date => {
-        const localDate = addDays(startOfDay(date), 1);
-        return localDate.toISOString().split('T')[0] === data;
-      });
-      if (selectedDate) {
-        newDatas[data] = horarios;
-      }
-    });
-
-    // Depois, adiciona as novas datas selecionadas
-    dates.forEach(date => {
-      const localDate = addDays(startOfDay(date), 1);
-      const dateStr = localDate.toISOString().split('T')[0];
-      if (!newDatas[dateStr]) {
-        newDatas[dateStr] = [];
-      }
-    });
-
-    onChange(newDatas);
-
-    // Se selecionou uma nova data única, abre o modal
-    const novasDatas = dates.filter(date => {
-      const localDate = addDays(startOfDay(date), 1);
-      const dateStr = localDate.toISOString().split('T')[0];
-      return !datas[dateStr];
-    });
-
-    if (novasDatas.length === 1) {
-      handleDateClick(novasDatas[0]);
+    if (dates.length === 1) {
+      handleDateClick(dates[0]);
+    } else {
+      dates.forEach(date => handleDateClick(date));
     }
+  };
+
+  const handleDayMouseEnter = (date) => {
+    if (!isWeekly) return; // Apenas no modo semanal
+    const dayOfWeek = date.getDay(); // 0 (Dom) a 6 (Sáb)
+    setHoveredWeekday(dayOfWeek);
+  };
+
+  const handleDayMouseLeave = () => {
+    if (!isWeekly) return; // Apenas no modo semanal
+    setHoveredWeekday(null);
   };
 
   // Converte as datas string para objetos Date para o calendário
@@ -120,7 +176,14 @@ export default function DataUnicaConfig({ datas = {}, onChange }) {
           classNames={{
             day_selected: "bg-orange-500 text-white hover:bg-orange-600",
             day_today: "bg-gray-700 text-white",
+            day_matches_hovered: isWeekly ? (date) => {
+              // Verifica se o dia da semana do 'date' corresponde ao 'hoveredWeekday' e se é uma data futura
+              return hoveredWeekday !== null && date.getDay() === hoveredWeekday && isAfter(date, new Date());
+            } : null
           }}
+          hoveredWeekday={isWeekly ? hoveredWeekday : null}
+          onDayMouseEnter={handleDayMouseEnter}
+          onDayMouseLeave={handleDayMouseLeave}
         />
       </div>
 
@@ -139,10 +202,22 @@ export default function DataUnicaConfig({ datas = {}, onChange }) {
               </div>
               <button
                 onClick={() => {
-                  const { [data]: _, ...rest } = datas || {};
-                  onChange(rest);
+                  console.log('Removendo data:', data);
+                  console.log('Estado atual das datas:', datas);
+                  
+                  // Cria uma cópia do objeto datas
+                  const novasDatas = Object.entries(datas || {})
+                    .filter(([key]) => key !== data)
+                    .reduce((acc, [key, value]) => {
+                      acc[key] = value;
+                      return acc;
+                    }, {});
+                  
+                  console.log('Novas datas após remoção:', novasDatas);
+                  onChange(novasDatas);
                 }}
                 className="text-gray-400 hover:text-gray-300"
+                title="Desmarcar data"
               >
                 <TrashIcon className="h-5 w-5" />
               </button>
@@ -177,7 +252,7 @@ export default function DataUnicaConfig({ datas = {}, onChange }) {
         onConfirm={handleHorarioConfirm}
         selectedHorarios={modalConfig.horarios}
         data={modalConfig.dateKey ? new Date(modalConfig.dateKey) : null}
-        showReplicacao={Object.keys(datas || {}).length > 1}
+        showReplicacao={modalConfig.showReplicacao}
         tipoConfiguracao="unica"
       />
     </div>
