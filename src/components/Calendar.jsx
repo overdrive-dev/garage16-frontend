@@ -54,7 +54,7 @@ export default function Calendar({
     if (!hoveredDay) return false;
 
     if (weekView) {
-      return getDay(day) === getDay(hoveredDay) && isAfter(day, new Date());
+      return getDay(day) === getDay(hoveredDay) && !isBefore(day, startOfToday());
     }
 
     switch (mode) {
@@ -82,6 +82,10 @@ export default function Calendar({
   };
 
   const handleDateClick = (date) => {
+    console.log('Calendar handleDateClick - date:', date);
+    console.log('Calendar handleDateClick - selected:', selected);
+    console.log('Calendar handleDateClick - mode:', mode);
+
     if (isDateDisabled(date)) return;
 
     if (weekView) {
@@ -92,11 +96,13 @@ export default function Calendar({
     switch (mode) {
       case 'range': {
         if (!selected?.from || (selected.from && selected.to)) {
+          console.log('Calendar handleDateClick - iniciando nova seleção');
           onChange({ 
             from: date, 
             to: null 
           });
         } else {
+          console.log('Calendar handleDateClick - completando range');
           const isAfterFrom = isAfter(date, selected.from) || isSameDay(date, selected.from);
           onChange({ 
             from: isAfterFrom ? selected.from : date,
@@ -124,12 +130,13 @@ export default function Calendar({
     if (!selected) return false;
     
     const normalizedDate = normalizeDate(date);
+    const today = startOfToday();
     
     if (weekView) {
       return Array.isArray(selected) && selected.some(selectedDate => {
         const normalizedSelected = normalizeDate(selectedDate);
         return getDay(normalizedSelected) === getDay(normalizedDate) && 
-               isAfter(normalizedDate, normalizeDate(new Date()));
+               !isBefore(normalizedDate, today);
       });
     }
 
@@ -210,6 +217,7 @@ export default function Calendar({
           const isDisabled = isDateDisabled(day);
           const isCurrentMonth = isSameMonth(day, currentMonth);
           const isRelated = getRelatedDays(day);
+          const isTodayDate = isToday(day);
           
           return (
             <div
@@ -232,9 +240,10 @@ export default function Calendar({
                 className={classNames(
                   'mx-auto flex h-7 w-7 items-center justify-center rounded-full transition-colors',
                   isSelected && (customClassNames.day_selected || 'bg-orange-500 text-white'),
-                  !isSelected && isToday(day) && (customClassNames.day_today || 'bg-gray-700 text-white'),
-                  !isSelected && !isToday(day) && isCurrentMonth && 'text-gray-200',
-                  !isSelected && !isToday(day) && !isCurrentMonth && 'text-gray-400'
+                  !isSelected && isTodayDate && !isRelated && (customClassNames.day_today || 'bg-gray-700 text-white'),
+                  !isSelected && !isTodayDate && isCurrentMonth && 'text-gray-200',
+                  !isSelected && !isTodayDate && !isCurrentMonth && 'text-gray-400',
+                  isRelated && !isSelected && 'bg-gray-700 text-white'
                 )}
               >
                 {format(day, 'd')}
