@@ -11,51 +11,32 @@ export default function DataUnicaConfig({ datas = {}, onChange, isWeekly = false
   const [hoveredWeekday, setHoveredWeekday] = useState(null);
 
   const verificarReplicacao = (dataAtual) => {
-    console.log('\n=== Verificação de Replicação (Data Única) ===');
-    console.log('Data sendo verificada:', dataAtual);
-    console.log('Estado atual das datas:', datas);
-
-    const horariosDaData = datas[dataAtual];
-    console.log('Horários da data atual:', horariosDaData);
-
-    const estaEditando = horariosDaData && horariosDaData.length > 0;
-    console.log('Está editando?', estaEditando);
-
-    if (!estaEditando) {
-      console.log('Não mostra replicação pois não está editando');
-      return false;
-    }
-
     const datasConfiguradas = Object.entries(datas || {})
       .filter(([data, horarios]) => data !== dataAtual && horarios && horarios.length > 0)
       .map(([data]) => data);
 
-    console.log('Datas configuradas (excluindo atual):', datasConfiguradas);
-    console.log('Quantidade de datas configuradas:', datasConfiguradas.length);
+    return datasConfiguradas.length > 0;
+  };
 
-    const horariosConsiderados = horariosDaData;
-    console.log('Horários considerados:', horariosConsiderados);
+  const handleListClick = (dateStr) => {
+    const horarios = datas?.[dateStr] || [];
+    
+    const showReplicacao = verificarReplicacao(dateStr);
 
-    const deveExibirReplicacao = datasConfiguradas.length > 0;
-    console.log('Deve exibir replicação?', deveExibirReplicacao);
-    console.log('Motivo:', deveExibirReplicacao ? 'Existem outras datas configuradas' : 'Não existem outras datas configuradas');
-    console.log('=====================================\n');
-
-    return deveExibirReplicacao;
+    setModalConfig({
+      isOpen: true,
+      dateKey: dateStr,
+      horarios,
+      showReplicacao
+    });
   };
 
   const handleDateClick = (date) => {
-    console.log('\n=== Clique na Data ===');
-    console.log('Data clicada:', date);
+    if (!date) return;
     
     const dateStr = normalizeDateString(date);
-    console.log('Data normalizada:', dateStr);
-    
     const horarios = datas?.[dateStr] || [];
-    console.log('Horários existentes:', horarios);
-    
     const showReplicacao = verificarReplicacao(dateStr);
-    console.log('Mostrar replicação?', showReplicacao);
 
     setModalConfig({
       isOpen: true,
@@ -70,7 +51,6 @@ export default function DataUnicaConfig({ datas = {}, onChange, isWeekly = false
       const { horarios: horariosNovos, replicar } = horarioData;
       
       if (!horariosNovos || horariosNovos.length === 0) {
-        console.log('Removendo data:', modalConfig.dateKey);
         const novasDatas = { ...datas };
         delete novasDatas[modalConfig.dateKey];
         onChange(novasDatas);
@@ -83,12 +63,8 @@ export default function DataUnicaConfig({ datas = {}, onChange, isWeekly = false
 
       if (replicar?.tipo === 'todos') {
         if (isWeekly) {
-          console.log('Replicando horários no modo semanal');
-          console.log('Dias já configurados:', Object.keys(datas));
-          
           Object.keys(datas).forEach(data => {
             if (data !== modalConfig.dateKey && datas[data]?.length > 0) {
-              console.log('Replicando para:', data);
               novasDatas[data] = horariosNovos;
             }
           });
@@ -111,10 +87,13 @@ export default function DataUnicaConfig({ datas = {}, onChange, isWeekly = false
   };
 
   const handleCalendarSelect = (dates) => {
-    if (dates.length === 1) {
+    if (dates && !Array.isArray(dates)) {
+      handleDateClick(dates);
+      return;
+    }
+
+    if (Array.isArray(dates) && dates.length > 0) {
       handleDateClick(dates[0]);
-    } else {
-      dates.forEach(date => handleDateClick(date));
     }
   };
 
@@ -129,7 +108,6 @@ export default function DataUnicaConfig({ datas = {}, onChange, isWeekly = false
     setHoveredWeekday(null);
   };
 
-  // Converte as datas string para objetos Date para o calendário
   const selectedDates = Object.keys(datas || {}).map(dateStr => 
     normalizeDate(dateStr)
   );
@@ -143,12 +121,11 @@ export default function DataUnicaConfig({ datas = {}, onChange, isWeekly = false
 
   return (
     <div className="space-y-6">
-      {/* Calendário */}
       <div className="bg-gray-800 rounded-lg p-4">
         <Calendar
           mode="multiple"
           selected={selectedDates}
-          onChange={handleCalendarSelect}
+          onChange={handleDateClick}
           minDate={normalizeDate(new Date())}
           classNames={{
             day_selected: "bg-orange-500 text-white hover:bg-orange-600",
@@ -159,10 +136,13 @@ export default function DataUnicaConfig({ datas = {}, onChange, isWeekly = false
         />
       </div>
 
-      {/* Lista de Datas */}
       <div className="space-y-2">
         {Object.entries(datas || {}).map(([data, horarios]) => (
-          <div key={data} className="flex items-center justify-between bg-gray-800 p-3 rounded-lg">
+          <div 
+            key={data} 
+            className="flex items-center justify-between bg-gray-800 p-3 rounded-lg hover:bg-gray-700/50 transition-colors cursor-pointer"
+            onClick={() => handleListClick(data)}
+          >
             <div>
               <div className="text-gray-200">
                 {format(normalizeDate(data), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
@@ -172,7 +152,10 @@ export default function DataUnicaConfig({ datas = {}, onChange, isWeekly = false
               </div>
             </div>
             <button
-              onClick={() => handleDateClick(normalizeDate(data))}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleListClick(data);
+              }}
               className="p-2 text-gray-400 hover:text-gray-300 transition-colors"
             >
               <TrashIcon className="w-5 h-5" />
@@ -181,15 +164,15 @@ export default function DataUnicaConfig({ datas = {}, onChange, isWeekly = false
         ))}
       </div>
 
-      {/* Modal de Horários */}
       {modalConfig.isOpen && (
         <HorarioModal
           isOpen={modalConfig.isOpen}
           onClose={handleModalClose}
           onConfirm={handleHorarioConfirm}
-          data={normalizeDate(modalConfig.dateKey)}
+          data={new Date(modalConfig.dateKey)}
           selectedHorarios={modalConfig.horarios}
           showReplicacao={modalConfig.showReplicacao}
+          tipoConfiguracao="unica"
         />
       )}
     </div>

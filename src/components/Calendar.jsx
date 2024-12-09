@@ -49,13 +49,6 @@ export default function Calendar({
     end: endOfWeek(endOfMonth(currentMonth), { locale: ptBR }),
   }).map(day => normalizeDate(day));
 
-  console.log('\n=== Calendar days generation ===');
-  console.log('Primeiro dia do mês:', firstDayCurrentMonth.toISOString());
-  console.log('Início da semana:', startOfWeek(firstDayCurrentMonth, { locale: ptBR }).toISOString());
-  console.log('Fim do mês:', endOfMonth(currentMonth).toISOString());
-  console.log('Fim da semana:', endOfWeek(endOfMonth(currentMonth), { locale: ptBR }).toISOString());
-  console.log('===================\n');
-
   // Identifica os dias relacionados baseado no modo
   const getRelatedDays = (day) => {
     if (!hoveredDay) return false;
@@ -91,10 +84,6 @@ export default function Calendar({
   const handleDateClick = (date) => {
     if (isDateDisabled(date)) return;
 
-    console.log('\n=== Calendar handleDateClick ===');
-    console.log('Data antes do clique (raw):', date);
-    console.log('Data antes do clique (ISO):', date.toISOString());
-
     if (weekView) {
       onChange([date]);
       return;
@@ -119,13 +108,12 @@ export default function Calendar({
       case 'multiple': {
         const currentSelected = Array.isArray(selected) ? selected : [];
         const dateExists = currentSelected.some(d => isSameDay(d, date));
-        onChange(dateExists 
-          ? currentSelected.filter(d => !isSameDay(d, date))
-          : [...currentSelected, date]
-        );
+        onChange(date);
         break;
       }
       case 'single':
+        onChange(date);
+        break;
       default:
         onChange([date]);
         break;
