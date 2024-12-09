@@ -36,11 +36,10 @@ export default function Calendar({
   disabledDates = [],
   classNames: customClassNames = {},
   defaultMonth = new Date(),
-  weekView = false,
-  onDayMouseEnter,
-  onDayMouseLeave
+  weekView = false
 }) {
   const [currentMonth, setCurrentMonth] = useState(defaultMonth);
+  const [hoveredDay, setHoveredDay] = useState(null);
   const firstDayCurrentMonth = startOfMonth(currentMonth);
 
   const days = eachDayOfInterval({
@@ -48,92 +47,101 @@ export default function Calendar({
     end: endOfWeek(endOfMonth(currentMonth), { locale: ptBR }),
   });
 
-  const previousMonth = () => {
-    setCurrentMonth(add(firstDayCurrentMonth, { months: -1 }));
-  };
+  // Identifica os dias relacionados baseado no modo
+  const getRelatedDays = (day) => {
+    if (!hoveredDay) return false;
 
-  const nextMonth = () => {
-    setCurrentMonth(add(firstDayCurrentMonth, { months: 1 }));
+    if (weekView) {
+      return getDay(day) === getDay(hoveredDay) && isAfter(day, new Date());
+    }
+
+    switch (mode) {
+      case 'period':
+        if (!selected?.from) return isSameDay(day, hoveredDay);
+        const start = selected.from;
+        const end = hoveredDay;
+        return isWithinInterval(day, {
+          start: isBefore(start, end) ? start : end,
+          end: isBefore(start, end) ? end : start
+        });
+      case 'single':
+      case 'multiple':
+      default:
+        return isSameDay(day, hoveredDay);
+    }
   };
 
   const isDateSelected = (date) => {
     if (!selected) return false;
     
-    if (mode === 'single') {
-      return isSameDay(date, selected);
-    }
-    
-    if (mode === 'multiple') {
-      if (weekView) {
-        // No modo semanal, verifica se existe uma data selecionada para este dia da semana
-        // E se a data é futura
-        return selected.some(selectedDate => {
-          const normalizedDate = startOfDay(selectedDate);
-          const normalizedCurrent = startOfDay(date);
-          const isSameWeekday = getDay(normalizedDate) === getDay(normalizedCurrent);
-          const isFutureDate = isAfter(normalizedCurrent, startOfDay(new Date()));
-          return isSameWeekday && isFutureDate;
-        });
-      }
-      return selected.some(selectedDate => isSameDay(date, selectedDate));
-    }
-    
-    if (mode === 'range' && selected.from && selected.to) {
-      return isWithinInterval(date, { 
-        start: startOfDay(selected.from), 
-        end: startOfDay(selected.to) 
+    if (weekView) {
+      return Array.isArray(selected) && selected.some(selectedDate => {
+        const normalizedDate = startOfDay(selectedDate);
+        const normalizedCurrent = startOfDay(date);
+        return getDay(normalizedDate) === getDay(normalizedCurrent) && 
+               isAfter(normalizedCurrent, startOfDay(new Date()));
       });
     }
 
-    if (mode === 'range' && selected.from) {
-      return isSameDay(date, selected.from);
+    switch (mode) {
+      case 'period':
+        if (!selected.from) return false;
+        if (!selected.to) return isSameDay(date, selected.from);
+        return isWithinInterval(date, { 
+          start: selected.from, 
+          end: selected.to 
+        });
+      case 'single':
+      case 'multiple':
+      default:
+        return Array.isArray(selected) 
+          ? selected.some(d => isSameDay(d, date))
+          : isSameDay(date, selected);
     }
-    
-    return false;
-  };
-
-  const isDateDisabled = (date) => {
-    // Verifica data mínima
-    if (minDate && isBefore(date, startOfDay(minDate))) {
-      return true;
-    }
-
-    // Verifica data máxima
-    if (maxDate && isAfter(date, startOfDay(maxDate))) {
-      return true;
-    }
-
-    // Verifica datas desabilitadas específicas
-    return disabledDates.some(disabledDate => isSameDay(date, disabledDate));
   };
 
   const handleDateClick = (date) => {
     if (isDateDisabled(date)) return;
 
-    if (mode === 'single') {
-      onChange(date);
-    } else if (mode === 'multiple') {
-      const currentSelected = selected || [];
-      
-      if (weekView) {
-        // No modo semanal, sempre passa a data clicada
-        onChange([date]);
-      } else {
-        // Em vez de remover a data quando clicada novamente, sempre chama onChange
-        onChange([date]);
-      }
-    } else if (mode === 'range') {
-      if (!selected?.from || (selected.from && selected.to)) {
-        onChange({ from: date, to: null });
-      } else {
-        const { from } = selected;
-        if (isBefore(date, from)) {
-          onChange({ from: date, to: from });
-        } else {
-          onChange({ from, to: date });
-        }
-      }
+    if (weekView) {
+      onChange([date]);
+      return;
     }
+
+    switch (mode) {
+      case 'period':
+        if (!selected?.from || (selected.from && selected.to)) {
+          onChange({ from: date, to: null });
+        } else {
+          const { from } = selected;
+          onChange({ 
+            from: isBefore(date, from) ? date : from, 
+            to: isBefore(date, from) ? from : date 
+          });
+        }
+        break;
+      case 'multiple':
+        const currentSelected = Array.isArray(selected) ? selected : [];
+        const dateExists = currentSelected.some(d => isSameDay(d, date));
+        onChange(dateExists 
+          ? currentSelected.filter(d => !isSameDay(d, date))
+          : [...currentSelected, date]
+        );
+        break;
+      case 'single':
+      default:
+        onChange([date]);
+        break;
+    }
+  };
+
+  const isDateDisabled = (date) => {
+    if (minDate && isBefore(date, startOfDay(minDate))) return true;
+    if (maxDate && isAfter(date, startOfDay(maxDate))) return true;
+    if (typeof disabledDates === 'function') {
+      return disabledDates(date);
+    }
+    return Array.isArray(disabledDates) && disabledDates.some(disabledDate => isSameDay(date, disabledDate));
   };
 
   return (
@@ -145,14 +153,14 @@ export default function Calendar({
         <div className="flex items-center space-x-2">
           <button
             type="button"
-            onClick={previousMonth}
+            onClick={() => setCurrentMonth(add(firstDayCurrentMonth, { months: -1 }))}
             className="p-2 text-gray-400 hover:text-gray-300 transition-colors"
           >
             <ChevronLeftIcon className="w-5 h-5" />
           </button>
           <button
             type="button"
-            onClick={nextMonth}
+            onClick={() => setCurrentMonth(add(firstDayCurrentMonth, { months: 1 }))}
             className="p-2 text-gray-400 hover:text-gray-300 transition-colors"
           >
             <ChevronRightIcon className="w-5 h-5" />
@@ -175,11 +183,7 @@ export default function Calendar({
           const isSelected = isDateSelected(day);
           const isDisabled = isDateDisabled(day);
           const isCurrentMonth = isSameMonth(day, currentMonth);
-          const isRangeStart = mode === 'range' && selected?.from && isSameDay(day, selected.from);
-          const isRangeEnd = mode === 'range' && selected?.to && isSameDay(day, selected.to);
-          const isInRange = mode === 'range' && selected?.from && selected?.to && 
-            isWithinInterval(day, { start: selected.from, end: selected.to });
-          const matchesHovered = customClassNames.day_matches_hovered ? customClassNames.day_matches_hovered(day) : false;
+          const isRelated = getRelatedDays(day);
           
           return (
             <div
@@ -187,16 +191,15 @@ export default function Calendar({
               className={classNames(
                 dayIdx === 0 && colStartClasses[getDay(day)],
                 'relative py-3',
-                !isCurrentMonth && '',
+                !isCurrentMonth && 'text-gray-400',
                 isDisabled && 'cursor-not-allowed opacity-50',
                 !isDisabled && 'cursor-pointer transition-colors',
-                isInRange && !isRangeStart && !isRangeEnd && 'bg-orange-500/20',
-                matchesHovered ? 'bg-gray-700' : 'bg-gray-800',
-                'hover:!bg-gray-700'
+                isRelated && 'bg-gray-700',
+                !isRelated && 'bg-gray-800 hover:bg-gray-700'
               )}
               onClick={() => !isDisabled && handleDateClick(day)}
-              onMouseEnter={() => !isDisabled && onDayMouseEnter?.(day)}
-              onMouseLeave={onDayMouseLeave}
+              onMouseEnter={() => setHoveredDay(day)}
+              onMouseLeave={() => setHoveredDay(null)}
             >
               <time
                 dateTime={format(day, 'yyyy-MM-dd')}
@@ -205,9 +208,7 @@ export default function Calendar({
                   isSelected && (customClassNames.day_selected || 'bg-orange-500 text-white'),
                   !isSelected && isToday(day) && (customClassNames.day_today || 'bg-gray-700 text-white'),
                   !isSelected && !isToday(day) && isCurrentMonth && 'text-gray-200',
-                  !isSelected && !isToday(day) && !isCurrentMonth && 'text-gray-400',
-                  isRangeStart && 'bg-orange-500 text-white',
-                  isRangeEnd && 'bg-orange-500 text-white'
+                  !isSelected && !isToday(day) && !isCurrentMonth && 'text-gray-400'
                 )}
               >
                 {format(day, 'd')}

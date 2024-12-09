@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { format, startOfDay, isAfter, eachDayOfInterval, endOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
 import Calendar from '@/components/Calendar';
 
 const diasDaSemana = [
@@ -35,6 +34,7 @@ export default function CalendarioSemanal({
 
   const handleDayMouseEnter = (date) => {
     if (!isDataDisponivel(date)) return;
+    
     const dayOfWeek = date.getDay();
     setHoveredWeekday(dayOfWeek);
   };
@@ -53,11 +53,27 @@ export default function CalendarioSemanal({
     onChange(diaSemana);
   };
 
+  // Converte os dias ativos em datas para o calendário
+  const getDiasAtivos = () => {
+    const hoje = startOfDay(new Date());
+    const todasDatasDoMes = eachDayOfInterval({
+      start: startOfDay(hoje),
+      end: endOfMonth(hoje)
+    });
+
+    return todasDatasDoMes.filter(data => {
+      const diaSemana = diasDaSemana[data.getDay()].key;
+      const diaAtivo = diasAtivos.includes(diaSemana);
+      const isFutureDate = isAfter(startOfDay(data), startOfDay(new Date()));
+      return diaAtivo && isFutureDate && isDataDisponivel(data);
+    });
+  };
+
   return (
     <div className="bg-gray-800 rounded-lg p-4">
       <Calendar
         mode="multiple"
-        selected={diasAtivos}
+        selected={getDiasAtivos()}
         onChange={handleCalendarSelect}
         weekView={true}
         minDate={startOfDay(minDate)}
@@ -67,10 +83,13 @@ export default function CalendarioSemanal({
         }
         onDayMouseEnter={handleDayMouseEnter}
         onDayMouseLeave={handleDayMouseLeave}
-        hoveredWeekday={hoveredWeekday}
         classNames={{
           day_selected: "bg-orange-500 text-white hover:bg-orange-600",
-          day_today: "bg-gray-700 text-white"
+          day_today: "bg-gray-700 text-white",
+          day_matches_hovered: (date) => {
+            if (!hoveredWeekday) return false;
+            return date.getDay() === hoveredWeekday && isAfter(date, new Date());
+          }
         }}
         locale={ptBR}
       />
