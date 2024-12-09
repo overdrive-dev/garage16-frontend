@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
 import {
   add,
@@ -19,12 +19,29 @@ import {
   isWithinInterval,
   startOfDay,
   isBefore,
-  isAfter
+  isAfter,
+  parseISO
 } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 function classNames(...classes) {
   return classes.filter(Boolean).join(' ');
+}
+
+// Função auxiliar para normalizar a data para o início do dia no fuso horário local
+function normalizeToLocalStartOfDay(date) {
+  if (!date) return null;
+  const localDate = new Date(date);
+  return startOfDay(localDate);
+}
+
+// Função auxiliar para converter data para string no formato YYYY-MM-DD
+function dateToString(date) {
+  if (!date) return null;
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
 export default function Calendar({ 
@@ -36,7 +53,8 @@ export default function Calendar({
   disabledDates = [],
   classNames: customClassNames = {},
   defaultMonth = new Date(),
-  weekView = false
+  weekView = false,
+  showPreview = true
 }) {
   const [currentMonth, setCurrentMonth] = useState(defaultMonth);
   const [hoveredDay, setHoveredDay] = useState(null);
@@ -56,47 +74,26 @@ export default function Calendar({
     }
 
     switch (mode) {
-      case 'period':
+      case 'period': {
+        if (!showPreview) return false;
+        
         if (!selected?.from) return isSameDay(day, hoveredDay);
+        
+        // Se já temos um período selecionado, não mostra preview
+        if (selected.from && selected.to) return false;
+        
         const start = selected.from;
         const end = hoveredDay;
+        
         return isWithinInterval(day, {
           start: isBefore(start, end) ? start : end,
           end: isBefore(start, end) ? end : start
         });
+      }
       case 'single':
       case 'multiple':
       default:
         return isSameDay(day, hoveredDay);
-    }
-  };
-
-  const isDateSelected = (date) => {
-    if (!selected) return false;
-    
-    if (weekView) {
-      return Array.isArray(selected) && selected.some(selectedDate => {
-        const normalizedDate = startOfDay(selectedDate);
-        const normalizedCurrent = startOfDay(date);
-        return getDay(normalizedDate) === getDay(normalizedCurrent) && 
-               isAfter(normalizedCurrent, startOfDay(new Date()));
-      });
-    }
-
-    switch (mode) {
-      case 'period':
-        if (!selected.from) return false;
-        if (!selected.to) return isSameDay(date, selected.from);
-        return isWithinInterval(date, { 
-          start: selected.from, 
-          end: selected.to 
-        });
-      case 'single':
-      case 'multiple':
-      default:
-        return Array.isArray(selected) 
-          ? selected.some(d => isSameDay(d, date))
-          : isSameDay(date, selected);
     }
   };
 
@@ -109,18 +106,33 @@ export default function Calendar({
     }
 
     switch (mode) {
-      case 'period':
+      case 'period': {
+        const normalizedDate = normalizeToLocalStartOfDay(date);
+        
+        console.log('Calendar - handleDateClick:', {
+          date: dateToString(normalizedDate),
+          selected: {
+            from: dateToString(selected?.from),
+            to: dateToString(selected?.to)
+          }
+        });
+        
         if (!selected?.from || (selected.from && selected.to)) {
-          onChange({ from: date, to: null });
-        } else {
-          const { from } = selected;
           onChange({ 
-            from: isBefore(date, from) ? date : from, 
-            to: isBefore(date, from) ? from : date 
+            from: normalizedDate, 
+            to: null 
+          });
+        } else {
+          const normalizedFrom = normalizeToLocalStartOfDay(selected.from);
+          const isAfterFrom = isAfter(normalizedDate, normalizedFrom) || isSameDay(normalizedDate, normalizedFrom);
+          onChange({ 
+            from: isAfterFrom ? normalizedFrom : normalizedDate,
+            to: isAfterFrom ? normalizedDate : normalizedFrom
           });
         }
         break;
-      case 'multiple':
+      }
+      case 'multiple': {
         const currentSelected = Array.isArray(selected) ? selected : [];
         const dateExists = currentSelected.some(d => isSameDay(d, date));
         onChange(dateExists 
@@ -128,6 +140,7 @@ export default function Calendar({
           : [...currentSelected, date]
         );
         break;
+      }
       case 'single':
       default:
         onChange([date]);
@@ -135,9 +148,47 @@ export default function Calendar({
     }
   };
 
+  const isDateSelected = (date) => {
+    if (!selected) return false;
+    
+    if (weekView) {
+      return Array.isArray(selected) && selected.some(selectedDate => {
+        const normalizedDate = normalizeToLocalStartOfDay(selectedDate);
+        const normalizedCurrent = normalizeToLocalStartOfDay(date);
+        return getDay(normalizedDate) === getDay(normalizedCurrent) && 
+               isAfter(normalizedCurrent, startOfDay(new Date()));
+      });
+    }
+
+    switch (mode) {
+      case 'period': {
+        if (!selected.from) return false;
+        
+        const normalizedDate = normalizeToLocalStartOfDay(date);
+        const normalizedStart = normalizeToLocalStartOfDay(selected.from);
+        const normalizedEnd = normalizeToLocalStartOfDay(selected.to);
+        
+        if (!normalizedDate || !normalizedStart) return false;
+        if (!normalizedEnd) return isSameDay(normalizedDate, normalizedStart);
+        
+        return isWithinInterval(normalizedDate, { 
+          start: normalizedStart, 
+          end: normalizedEnd 
+        });
+      }
+
+      case 'single':
+      case 'multiple':
+      default:
+        return Array.isArray(selected) 
+          ? selected.some(d => isSameDay(d, date))
+          : isSameDay(date, selected);
+    }
+  };
+
   const isDateDisabled = (date) => {
-    if (minDate && isBefore(date, startOfDay(minDate))) return true;
-    if (maxDate && isAfter(date, startOfDay(maxDate))) return true;
+    if (minDate && isBefore(date, normalizeToLocalStartOfDay(minDate))) return true;
+    if (maxDate && isAfter(date, normalizeToLocalStartOfDay(maxDate))) return true;
     if (typeof disabledDates === 'function') {
       return disabledDates(date);
     }

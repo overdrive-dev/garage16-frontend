@@ -1,0 +1,58 @@
+C:\Users\vctrs\OneDrive\Documents\GitHub\garage16-frontend\src\config\firebase.js:5 Firebase Config: {apiKey: 'AIzaSyAMgIKopmfaz9Gg1FyPQQ-OPCQSxoBJVRw', authDomain: 'garage16-e5cfc.firebaseapp.com', projectId: 'garage16-e5cfc'}
+hook.js:608 Image with src "https://lh3.googleusercontent.com/a/ACg8ocJFDMD4hcfruQj4hSxqHvA5InPy-Gq2Ag1fXfiJgdz815jhUQ=s96-c" is using deprecated "onLoadingComplete" property. Please use the "onLoad" property instead. Error Component Stack
+    at eval (image-component.js:238:47)
+    at div (<anonymous>)
+    at UserAvatar (C:\Users\vctrs\OneDrive\Documents\GitHub\garage16-frontend\src\components\UserAvatar.jsx:6:38)
+    at button (<anonymous>)
+    at div (<anonymous>)
+    at div (<anonymous>)
+    at div (<anonymous>)
+    at nav (<anonymous>)
+    at div (<anonymous>)
+    at header (<anonymous>)
+    at Header (C:\Users\vctrs\OneDrive\Documents\GitHub\garage16-frontend\src\components\Header.jsx:16:27)
+    at DisponibilidadeProvider (C:\Users\vctrs\OneDrive\Documents\GitHub\garage16-frontend\src\contexts\DisponibilidadeContext.js:36:43)
+    at AuthProvider (C:\Users\vctrs\OneDrive\Documents\GitHub\garage16-frontend\src\contexts\AuthContext.js:17:32)
+    at body (<anonymous>)
+    at html (<anonymous>)
+    at RootLayout [Server] (<anonymous>)
+    at RedirectErrorBoundary (redirect-boundary.js:74:9)
+    at RedirectBoundary (redirect-boundary.js:82:11)
+    at NotFoundErrorBoundary (not-found-boundary.js:76:9)
+    at NotFoundBoundary (not-found-boundary.js:84:11)
+    at DevRootNotFoundBoundary (dev-root-not-found-boundary.js:33:11)
+    at ReactDevOverlay (ReactDevOverlay.js:80:9)
+    at HotReload (hot-reloader-client.js:379:11)
+    at Router (app-router.js:155:11)
+    at ErrorBoundaryHandler (error-boundary.js:120:9)
+    at ErrorBoundary (error-boundary.js:167:11)
+    at AppRouter (app-router.js:549:11)
+    at ServerRoot (app-index.js:142:46)
+    at Root (app-index.js:162:11)
+overrideMethod @ hook.js:608
+warnOnce @ warn-once.js:16
+getImgProps @ get-img-props.js:329
+eval @ image-component.js:272
+react-stack-bottom-frame @ react-dom-client.development.js:22339
+renderWithHooks @ react-dom-client.development.js:5731
+updateForwardRef @ react-dom-client.development.js:7736
+beginWork @ react-dom-client.development.js:9988
+runWithFiberInDEV @ react-dom-client.development.js:544
+performUnitOfWork @ react-dom-client.development.js:14986
+workLoopSync @ react-dom-client.development.js:14816
+renderRootSync @ react-dom-client.development.js:14794
+performWorkOnRoot @ react-dom-client.development.js:14288
+performWorkOnRootViaSchedulerTask @ react-dom-client.development.js:15843
+performWorkUntilDeadline @ scheduler.development.js:44
+C:\Users\vctrs\OneDrive\Documents\GitHub\garage16-frontend\src\components\Calendar.jsx:112 Calendar - handleDateClick: {date: '2024-12-11', selected: {…}}date: "2024-12-11"selected: {from: null, to: null}[[Prototype]]: Object
+C:\Users\vctrs\OneDrive\Documents\GitHub\garage16-frontend\src\components\disponibilidade\PeriodoConfig.jsx:80 PeriodoConfig - Range Recebido: {from: '2024-12-11', to: null, isSelectingNew: false}from: "2024-12-11"isSelectingNew: falseto: null[[Prototype]]: Object
+C:\Users\vctrs\OneDrive\Documents\GitHub\garage16-frontend\src\components\disponibilidade\PeriodoConfig.jsx:98 PeriodoConfig - Iniciando Novo Período: 2024-12-11
+C:\Users\vctrs\OneDrive\Documents\GitHub\garage16-frontend\src\components\Calendar.jsx:112 Calendar - handleDateClick: {date: '2024-12-13', selected: {…}}date: "2024-12-13"selected: {from: '2024-12-11', to: null}[[Prototype]]: Object
+C:\Users\vctrs\OneDrive\Documents\GitHub\garage16-frontend\src\components\disponibilidade\PeriodoConfig.jsx:80 PeriodoConfig - Range Recebido: {from: '2024-12-11', to: '2024-12-13', isSelectingNew: true}from: "2024-12-11"isSelectingNew: trueto: "2024-12-13"[[Prototype]]: Object
+C:\Users\vctrs\OneDrive\Documents\GitHub\garage16-frontend\src\components\disponibilidade\PeriodoConfig.jsx:111 PeriodoConfig - Período Final: {from: '2024-12-11', to: '2024-12-13'}from: "2024-12-11"to: "2024-12-13"[[Prototype]]: Object
+C:\Users\vctrs\OneDrive\Documents\GitHub\garage16-frontend\src\components\disponibilidade\PeriodoConfig.jsx:144 PeriodoConfig - handleHorarioConfirm - Início: {selectedPeriod: {…}, horarios: {…}}
+C:\Users\vctrs\OneDrive\Documents\GitHub\garage16-frontend\src\components\disponibilidade\PeriodoConfig.jsx:168 PeriodoConfig - handleHorarioConfirm - Datas geradas: {datasNoPeriodo: Array(3), periodo: {…}}datasNoPeriodo: (3) ['2024-12-11', '2024-12-12', '2024-12-13']periodo: {from: '2024-12-11', to: '2024-12-13'}[[Prototype]]: Object
+C:\Users\vctrs\OneDrive\Documents\GitHub\garage16-frontend\src\components\disponibilidade\PeriodoConfig.jsx:183 PeriodoConfig - handleHorarioConfirm - Antes do onChange: {novasDatas: Array(3), selectedPeriod: {…}}novasDatas: (3) ['2024-12-11', '2024-12-12', '2024-12-13']selectedPeriod: {from: '2024-12-11', to: '2024-12-13'}[[Prototype]]: Object
+C:\Users\vctrs\OneDrive\Documents\GitHub\garage16-frontend\src\components\disponibilidade\PeriodoConfig.jsx:39 PeriodoConfig - getDatasExistentes - Entrada: {datasOrdenadas: Array(3), datas: {…}}datas: {2024-12-11: Array(1), 2024-12-12: Array(1), 2024-12-13: Array(1)}datasOrdenadas: (3) ['2024-12-11', '2024-12-12', '2024-12-13'][[Prototype]]: Object
+C:\Users\vctrs\OneDrive\Documents\GitHub\garage16-frontend\src\components\disponibilidade\PeriodoConfig.jsx:51 PeriodoConfig - getDatasExistentes - Saída: {from: '2024-12-10', to: '2024-12-12'}from: "2024-12-10"to: "2024-12-12"[[Prototype]]: Object
+C:\Users\vctrs\OneDrive\Documents\GitHub\garage16-frontend\src\components\disponibilidade\PeriodoConfig.jsx:67 PeriodoConfig - useEffect getDatasExistentes: {newPeriod: {…}, datas: Array(3)}datas: (3) ['2024-12-11', '2024-12-12', '2024-12-13']newPeriod: {from: '2024-12-10', to: '2024-12-12'}[[Prototype]]: Object
