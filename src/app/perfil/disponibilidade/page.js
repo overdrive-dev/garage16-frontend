@@ -7,6 +7,7 @@ import { useDisponibilidade } from '@/contexts/DisponibilidadeContext';
 import DataUnicaConfig from '@/components/disponibilidade/DataUnicaConfig';
 import SemanalConfig from '@/components/disponibilidade/SemanalConfig';
 import PeriodoConfig from '@/components/disponibilidade/PeriodoConfig';
+import { format } from 'date-fns';
 
 const estadoInicial = {
   tipo: 'unica',
@@ -176,11 +177,28 @@ export default function DisponibilidadePage() {
 
             {currentConfig.tipo === 'faixaHorario' && (
               <PeriodoConfig 
-                config={currentConfig.faixaHorario}
-                onChange={(updates) => {
+                selecao={{
+                  inicio: currentConfig.faixaHorario?.dataInicio ? new Date(currentConfig.faixaHorario.dataInicio + 'T00:00:00') : null,
+                  fim: currentConfig.faixaHorario?.dataFim ? new Date(currentConfig.faixaHorario.dataFim + 'T00:00:00') : null
+                }}
+                setSelecao={(novaSelecao) => {
                   setCurrentConfig(prev => ({
                     ...prev,
-                    faixaHorario: updates
+                    faixaHorario: {
+                      ...prev.faixaHorario,
+                      dataInicio: novaSelecao.inicio ? format(novaSelecao.inicio, 'yyyy-MM-dd') : null,
+                      dataFim: novaSelecao.fim ? format(novaSelecao.fim, 'yyyy-MM-dd') : null
+                    }
+                  }));
+                }}
+                horarios={currentConfig.faixaHorario?.horarios || {}}
+                setHorarios={(novosHorarios) => {
+                  setCurrentConfig(prev => ({
+                    ...prev,
+                    faixaHorario: {
+                      ...prev.faixaHorario,
+                      horarios: novosHorarios
+                    }
                   }));
                 }}
               />

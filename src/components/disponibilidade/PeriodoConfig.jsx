@@ -1,87 +1,84 @@
-import { useState } from 'react';
-import HorarioModal from './HorarioModal';
-import Calendar from '../Calendar';
-import { format, isAfter, startOfDay, eachDayOfInterval, endOfMonth } from 'date-fns';
+import { useState, useMemo } from 'react';
+import Calendar from '@/components/Calendar';
+import { format, isBefore, eachDayOfInterval, startOfDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { TrashIcon } from '@heroicons/react/24/outline';
+import HorarioModal from './HorarioModal';
 
-export default function PeriodoConfig({ horarios, onChange, datasDisponiveis = [] }) {
+export default function PeriodoConfig({ selecao = { inicio: null, fim: null }, setSelecao, horarios = {}, setHorarios }) {
   const [modalConfig, setModalConfig] = useState({
     isOpen: false,
-    periodo: null,
+    data: null,
     horarios: []
   });
 
-  // Verifica se uma data está disponível para configuração
-  const isDataDisponivel = (date) => {
-    if (!datasDisponiveis.length) return true;
-    
-    return datasDisponiveis.some(dataDisp => {
-      const dataDispDate = new Date(dataDisp);
-      return date.getDate() === dataDispDate.getDate() &&
-             date.getMonth() === dataDispDate.getMonth() &&
-             date.getFullYear() === dataDispDate.getFullYear();
+  // Normaliza as datas da seleção
+  const selecaoNormalizada = useMemo(() => ({
+    inicio: selecao.inicio,
+    fim: selecao.fim
+  }), [selecao.inicio, selecao.fim]);
+
+  // Função para lidar com a seleção de datas
+  const handleDateSelect = (range) => {
+    if (!range) {
+      setSelecao({ inicio: null, fim: null });
+      return;
+    }
+
+    // Se temos apenas início
+    if (range.from && !range.to) {
+      setSelecao({ inicio: range.from, fim: null });
+      return;
+    }
+
+    // Se temos início e fim
+    if (range.from && range.to) {
+      // Garante que início é sempre a data mais antiga
+      if (isBefore(range.to, range.from)) {
+        setSelecao({ inicio: range.to, fim: range.from });
+      } else {
+        setSelecao({ inicio: range.from, fim: range.to });
+      }
+    }
+  };
+
+  // Função para gerar a lista de datas entre início e fim
+  const getDatasIntervalo = () => {
+    if (!selecaoNormalizada.inicio || !selecaoNormalizada.fim) return [];
+    return eachDayOfInterval({
+      start: selecaoNormalizada.inicio,
+      end: selecaoNormalizada.fim
     });
   };
 
-  const handleCalendarSelect = (dates) => {
-    console.log('\n=== handleCalendarSelect ===');
-    console.log('Datas selecionadas:', dates);
-    
-    if (!dates?.from) return;
-    
-    const { from, to } = dates;
-    if (!isDataDisponivel(from)) {
-      console.log('Data inicial não disponível:', from.toISOString().split('T')[0]);
-      return;
-    }
+  const handleOpenModal = (data) => {
+    setModalConfig({
+      isOpen: true,
+      data: new Date(
+        data.getFullYear(),
+        data.getMonth(),
+        data.getDate()
+      ),
+      horarios: horarios[format(data, 'yyyy-MM-dd')] || []
+    });
+  };
 
-    if (to && !isDataDisponivel(to)) {
-      console.log('Data final não disponível:', to.toISOString().split('T')[0]);
-      return;
-    }
-
-    handleOpenModal(dates);
+  const handleCloseModal = () => {
+    setModalConfig({
+      isOpen: false,
+      data: null,
+      horarios: []
+    });
   };
 
   const handleHorarioConfirm = (horarioData) => {
-    console.log('\n=== handleHorarioConfirm ===');
-    console.log('Dados recebidos:', horarioData);
-    console.log('Estado atual:', modalConfig);
-    
-    if (modalConfig.periodo) {
-      const { horarios: horariosNovos } = horarioData;
-      const { from, to } = modalConfig.periodo;
-      
-      // Se está removendo horários
-      if (horariosNovos.length === 0) {
-        onChange({});
-      } else {
-        // Cria um objeto com os horários para o período
-        const novoHorarios = {
-          from,
-          to: to || from,
-          horarios: horariosNovos
-        };
-
-        onChange(novoHorarios);
-      }
+    if (modalConfig.data) {
+      const dataStr = format(modalConfig.data, 'yyyy-MM-dd');
+      setHorarios(prev => ({
+        ...prev,
+        [dataStr]: horarioData.horarios
+      }));
     }
-    console.log('===================\n');
-    setModalConfig({ isOpen: false, periodo: null, horarios: [] });
-  };
-
-  const handleModalClose = () => {
-    setModalConfig({ isOpen: false, periodo: null, horarios: [] });
-  };
-
-  const handleOpenModal = (periodo) => {
-    setModalConfig({
-      isOpen: true,
-      periodo,
-      horarios: horarios.horarios || [],
-      showReplicacao: false // Não precisa de replicação no modo período
-    });
+    handleCloseModal();
   };
 
   return (
@@ -90,56 +87,74 @@ export default function PeriodoConfig({ horarios, onChange, datasDisponiveis = [
       <div className="bg-gray-800 rounded-lg p-4">
         <Calendar
           mode="range"
-          selected={horarios.from ? { from: horarios.from, to: horarios.to || horarios.from } : null}
-          onChange={handleCalendarSelect}
-          minDate={startOfDay(new Date())}
-          disabledDates={datasDisponiveis.length > 0 ? 
-            (date) => !isDataDisponivel(date) 
-            : undefined
-          }
+          selected={{
+            from: selecao.inicio,
+            to: selecao.fim
+          }}
+          onChange={handleDateSelect}
+          minDate={new Date(new Date().setHours(0, 0, 0, 0))}
+          classNames={{
+            day_selected: "bg-orange-500 text-white hover:bg-orange-600 font-semibold",
+            day_today: "bg-gray-700 text-white",
+            day_range_middle: "bg-orange-500/20 hover:bg-orange-500/30",
+            day_range_start: "bg-orange-500 text-white rounded-l-full font-semibold",
+            day_range_end: "bg-orange-500 text-white rounded-r-full font-semibold"
+          }}
+          locale={ptBR}
         />
       </div>
 
-      {/* Período selecionado */}
-      {horarios.from && (
-        <div className="bg-gray-800 rounded-lg p-4">
-          <div className="flex items-center space-x-4">
-            <div className="w-48">
-              <div className="text-gray-200 text-lg font-medium">
-                {format(horarios.from, "dd/MM/yyyy", { locale: ptBR })}
-                {horarios.to && horarios.to !== horarios.from && (
-                  <> até {format(horarios.to, "dd/MM/yyyy", { locale: ptBR })}</>
+      {/* Lista de datas */}
+      {selecaoNormalizada.inicio && selecaoNormalizada.fim && (
+        <div className="space-y-4">
+          {getDatasIntervalo().map((data) => {
+            const dataStr = format(data, 'yyyy-MM-dd');
+            const horariosData = horarios[dataStr] || [];
+
+            return (
+              <div key={dataStr} className="bg-gray-800 rounded-lg p-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-medium">
+                    {format(data, "EEEE, dd 'de' MMMM", { locale: ptBR })}
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={() => handleOpenModal(data)}
+                    className="px-4 py-2 bg-orange-500 text-white rounded-md hover:bg-orange-600 transition-colors"
+                  >
+                    {horariosData.length > 0 ? 'Editar Horários' : 'Adicionar Horários'}
+                  </button>
+                </div>
+
+                {/* Lista de horários */}
+                {horariosData.length > 0 && (
+                  <div className="mt-4 space-y-2">
+                    {horariosData.map((horario, index) => (
+                      <div
+                        key={index}
+                        className="text-sm text-gray-400"
+                      >
+                        {format(new Date(`2000-01-01T${horario.inicio}`), 'HH:mm')}
+                        {' - '}
+                        {format(new Date(`2000-01-01T${horario.fim}`), 'HH:mm')}
+                      </div>
+                    ))}
+                  </div>
                 )}
               </div>
-            </div>
-            
-            <div className="flex-1">
-              <button
-                type="button"
-                onClick={() => handleOpenModal({ from: horarios.from, to: horarios.to })}
-                className="w-full bg-gray-700/50 rounded p-4 hover:bg-gray-700/70 text-left text-gray-200"
-              >
-                {horarios.horarios?.join(' - ')}
-              </button>
-            </div>
-            <button
-              type="button"
-              onClick={() => onChange({})}
-              className="p-2 text-gray-400 hover:text-gray-300 transition-colors"
-            >
-              <TrashIcon className="w-5 h-5" />
-            </button>
-          </div>
+            );
+          })}
         </div>
       )}
 
-      {/* Modal de horários */}
       <HorarioModal
         isOpen={modalConfig.isOpen}
-        onClose={handleModalClose}
+        onClose={handleCloseModal}
         onConfirm={handleHorarioConfirm}
-        horarios={modalConfig.horarios}
-        showReplicacao={modalConfig.showReplicacao}
+        selectedHorarios={modalConfig.horarios}
+        data={modalConfig.data}
+        showReplicacao={false}
+        tipoConfiguracao="periodo"
       />
     </div>
   );

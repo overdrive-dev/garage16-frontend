@@ -46,7 +46,7 @@ export default function Calendar({
   const days = eachDayOfInterval({
     start: startOfWeek(firstDayCurrentMonth, { locale: ptBR }),
     end: endOfWeek(endOfMonth(currentMonth), { locale: ptBR }),
-  });
+  }).map(date => startOfDay(date));
 
   const previousMonth = () => {
     setCurrentMonth(add(firstDayCurrentMonth, { months: -1 }));
@@ -56,37 +56,80 @@ export default function Calendar({
     setCurrentMonth(add(firstDayCurrentMonth, { months: 1 }));
   };
 
+  const handleDateClick = (date) => {
+    if (isDateDisabled(date)) return;
+
+    // Cria uma nova data usando os componentes da data original
+    const normalizedDate = new Date(
+      date.getFullYear(),
+      date.getMonth(),
+      date.getDate()
+    );
+
+    if (mode === 'single') {
+      onChange(normalizedDate);
+    } else if (mode === 'multiple') {
+      const currentSelected = selected || [];
+      
+      if (weekView) {
+        onChange([normalizedDate]);
+      } else {
+        onChange([normalizedDate]);
+      }
+    } else if (mode === 'range') {
+      if (!selected?.from || (selected.from && selected.to)) {
+        onChange({ from: normalizedDate, to: null });
+      } else {
+        const { from } = selected;
+        // Normaliza a data inicial também
+        const normalizedFrom = new Date(
+          from.getFullYear(),
+          from.getMonth(),
+          from.getDate()
+        );
+        
+        if (isBefore(normalizedDate, normalizedFrom)) {
+          onChange({ from: normalizedDate, to: normalizedFrom });
+        } else {
+          onChange({ from: normalizedFrom, to: normalizedDate });
+        }
+      }
+    }
+  };
+
   const isDateSelected = (date) => {
     if (!selected) return false;
     
+    const normalizedDate = new Date(date);
+    
     if (mode === 'single') {
-      return isSameDay(date, selected);
+      return isSameDay(normalizedDate, selected);
     }
     
     if (mode === 'multiple') {
       if (weekView) {
-        // No modo semanal, verifica se existe uma data selecionada para este dia da semana
-        // E se a data é futura
         return selected.some(selectedDate => {
-          const normalizedDate = startOfDay(selectedDate);
-          const normalizedCurrent = startOfDay(date);
-          const isSameWeekday = getDay(normalizedDate) === getDay(normalizedCurrent);
-          const isFutureDate = isAfter(normalizedCurrent, startOfDay(new Date()));
+          const normalizedSelected = new Date(selectedDate);
+          const isSameWeekday = getDay(normalizedSelected) === getDay(normalizedDate);
+          const isFutureDate = isAfter(normalizedDate, startOfDay(new Date()));
           return isSameWeekday && isFutureDate;
         });
       }
-      return selected.some(selectedDate => isSameDay(date, selectedDate));
+      return selected.some(selectedDate => isSameDay(normalizedDate, selectedDate));
     }
     
     if (mode === 'range' && selected.from && selected.to) {
-      return isWithinInterval(date, { 
-        start: startOfDay(selected.from), 
-        end: startOfDay(selected.to) 
+      const normalizedFrom = new Date(selected.from);
+      const normalizedTo = new Date(selected.to);
+      return isWithinInterval(normalizedDate, { 
+        start: normalizedFrom, 
+        end: normalizedTo 
       });
     }
 
     if (mode === 'range' && selected.from) {
-      return isSameDay(date, selected.from);
+      const normalizedFrom = new Date(selected.from);
+      return isSameDay(normalizedDate, normalizedFrom);
     }
     
     return false;
@@ -105,35 +148,6 @@ export default function Calendar({
 
     // Verifica datas desabilitadas específicas
     return disabledDates.some(disabledDate => isSameDay(date, disabledDate));
-  };
-
-  const handleDateClick = (date) => {
-    if (isDateDisabled(date)) return;
-
-    if (mode === 'single') {
-      onChange(date);
-    } else if (mode === 'multiple') {
-      const currentSelected = selected || [];
-      
-      if (weekView) {
-        // No modo semanal, sempre passa a data clicada
-        onChange([date]);
-      } else {
-        // Em vez de remover a data quando clicada novamente, sempre chama onChange
-        onChange([date]);
-      }
-    } else if (mode === 'range') {
-      if (!selected?.from || (selected.from && selected.to)) {
-        onChange({ from: date, to: null });
-      } else {
-        const { from } = selected;
-        if (isBefore(date, from)) {
-          onChange({ from: date, to: from });
-        } else {
-          onChange({ from, to: date });
-        }
-      }
-    }
   };
 
   return (
@@ -190,24 +204,30 @@ export default function Calendar({
                 !isCurrentMonth && '',
                 isDisabled && 'cursor-not-allowed opacity-50',
                 !isDisabled && 'cursor-pointer transition-colors',
-                isInRange && !isRangeStart && !isRangeEnd && 'bg-orange-500/20',
                 matchesHovered ? 'bg-gray-700' : 'bg-gray-800',
                 'hover:!bg-gray-700'
               )}
-              onClick={() => !isDisabled && handleDateClick(day)}
-              onMouseEnter={() => !isDisabled && onDayMouseEnter?.(day)}
+              onClick={() => {
+                if (!isDisabled) {
+                  handleDateClick(day);
+                }
+              }}
+              onMouseEnter={() => {
+                if (!isDisabled) {
+                  onDayMouseEnter?.(day);
+                }
+              }}
               onMouseLeave={onDayMouseLeave}
             >
               <time
                 dateTime={format(day, 'yyyy-MM-dd')}
                 className={classNames(
                   'mx-auto flex h-7 w-7 items-center justify-center rounded-full transition-colors',
-                  isSelected && (customClassNames.day_selected || 'bg-orange-500 text-white'),
-                  !isSelected && isToday(day) && (customClassNames.day_today || 'bg-gray-700 text-white'),
+                  isRangeStart && 'bg-orange-500 text-white font-semibold',
+                  isRangeEnd && 'bg-orange-500 text-white font-semibold',
+                  !isRangeStart && !isRangeEnd && isInRange && 'bg-orange-500/20 text-gray-200',
                   !isSelected && !isToday(day) && isCurrentMonth && 'text-gray-200',
-                  !isSelected && !isToday(day) && !isCurrentMonth && 'text-gray-400',
-                  isRangeStart && 'bg-orange-500 text-white',
-                  isRangeEnd && 'bg-orange-500 text-white'
+                  !isSelected && !isToday(day) && !isCurrentMonth && 'text-gray-400'
                 )}
               >
                 {format(day, 'd')}
