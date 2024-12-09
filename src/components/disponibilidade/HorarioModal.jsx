@@ -214,7 +214,7 @@ export default function HorarioModal({
             ))}
           </div>
 
-          {isNewRange && periodo && (
+          {isNewRange && periodo && horarios.length > 0 && (
             <p className="text-sm text-gray-400 mb-6 bg-gray-700/50 p-3 rounded-lg">
               Este horário será aplicado para todas as datas do período (
               {format(normalizeDate(periodo.from), "dd/MM", { locale: ptBR })} a{' '}
@@ -222,7 +222,7 @@ export default function HorarioModal({
             </p>
           )}
 
-          {showReplicacao && !isNewRange && (
+          {showReplicacao && !isNewRange && horarios.length > 0 && (
             tipoConfiguracao === 'periodo' ? renderPeriodoReplicacao() : renderDefaultReplicacao()
           )}
 

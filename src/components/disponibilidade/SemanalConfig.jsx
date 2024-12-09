@@ -140,9 +140,9 @@ export default function SemanalConfig({ horarios, onChange, datasDisponiveis = [
           // Adiciona apenas ao dia atual
           adicionarHorarioAoDia(modalConfig.diaSemana);
 
-          // Se houver replicação, adiciona aos outros dias selecionados
+          // Se houver replicação, adiciona aos outros dias ativos
           if (replicar) {
-            console.log('Replicando horários...');
+            console.log('Replicando horários para dias ativos...');
             // Pega apenas os dias que já estão ativos
             const diasAtivos = Object.entries(horarios)
               .filter(([_, config]) => config.ativo && config.horarios.length > 0)
@@ -150,21 +150,12 @@ export default function SemanalConfig({ horarios, onChange, datasDisponiveis = [
 
             console.log('Dias ativos encontrados:', diasAtivos);
 
-            if (replicar.tipo === 'todos') {
-              diasAtivos.forEach(dia => {
-                if (dia !== modalConfig.diaSemana) {
-                  adicionarHorarioAoDia(dia);
-                }
-              });
-            } else if (replicar.tipo === 'especificos') {
-              replicar.dias
-                .filter(dia => diasAtivos.includes(dia))
-                .forEach(dia => {
-                  if (dia !== modalConfig.diaSemana) {
-                    adicionarHorarioAoDia(dia);
-                  }
-                });
-            }
+            // Replica para todos os dias ativos
+            diasAtivos.forEach(dia => {
+              if (dia !== modalConfig.diaSemana) {
+                adicionarHorarioAoDia(dia);
+              }
+            });
           }
         }
 
