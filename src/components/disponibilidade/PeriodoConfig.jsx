@@ -1,25 +1,18 @@
 import { useState, useEffect } from 'react';
-import { format, startOfDay, addDays, eachDayOfInterval, isWithinInterval, isBefore } from 'date-fns';
+import { 
+  format, 
+  startOfDay, 
+  addDays, 
+  eachDayOfInterval, 
+  isWithinInterval, 
+  isBefore,
+  parseISO,
+  formatISO
+} from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { TrashIcon } from '@heroicons/react/24/outline';
 import Calendar from '@/components/Calendar';
 import HorarioModal from './HorarioModal';
-
-// Função auxiliar para normalizar a data para o início do dia no fuso horário local
-function normalizeToLocalStartOfDay(date) {
-  if (!date) return null;
-  const localDate = new Date(date);
-  return startOfDay(localDate);
-}
-
-// Função auxiliar para converter data para string no formato YYYY-MM-DD
-function dateToString(date) {
-  if (!date) return null;
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-}
 
 export default function PeriodoConfig({ datas = {}, onChange }) {
   const [modalConfig, setModalConfig] = useState({
@@ -46,12 +39,12 @@ export default function PeriodoConfig({ datas = {}, onChange }) {
       return { from: null, to: null };
     }
 
-    const from = normalizeToLocalStartOfDay(new Date(datasOrdenadas[0]));
-    const to = normalizeToLocalStartOfDay(new Date(datasOrdenadas[datasOrdenadas.length - 1]));
+    const from = startOfDay(parseISO(datasOrdenadas[0]));
+    const to = startOfDay(parseISO(datasOrdenadas[datasOrdenadas.length - 1]));
 
     console.log('PeriodoConfig - getDatasExistentes - Saída:', {
-      from: dateToString(from),
-      to: dateToString(to)
+      from: format(from, 'yyyy-MM-dd'),
+      to: format(to, 'yyyy-MM-dd')
     });
 
     return { from, to };
@@ -59,72 +52,100 @@ export default function PeriodoConfig({ datas = {}, onChange }) {
 
   // Atualiza o período selecionado quando as datas mudam
   useEffect(() => {
-    // Só atualiza se não houver período selecionado e não estiver no modo de seleção
     if (!isSelectingNewPeriod && !lastConfirmedPeriod.from) {
       const newPeriod = getDatasExistentes();
-      console.log('PeriodoConfig - useEffect getDatasExistentes:', {
-        newPeriod: {
-          from: dateToString(newPeriod.from),
-          to: dateToString(newPeriod.to)
-        },
-        datas: Object.keys(datas)
-      });
       setSelectedPeriod(newPeriod);
     } else if (lastConfirmedPeriod.from) {
       setSelectedPeriod(lastConfirmedPeriod);
     }
-  }, [datas, isSelectingNewPeriod]);
+  }, [datas, isSelectingNewPeriod, lastConfirmedPeriod]);
 
   const handleDateSelect = (range) => {
-    console.log('PeriodoConfig - Range Recebido:', {
-      from: dateToString(range?.from),
-      to: dateToString(range?.to),
-      isSelectingNew: isSelectingNewPeriod
+    console.log('\n=== handleDateSelect ===');
+    console.log('CLICK - Range recebido:', {
+      from: range?.from ? format(range.from, 'dd/MM/yyyy') : null,
+      to: range?.to ? format(range.to, 'dd/MM/yyyy') : null,
+      isRangeObject: !!range,
+      fromType: range?.from ? typeof range.from : null,
+      toType: range?.to ? typeof range.to : null
+    });
+    console.log('CLICK - Estado atual antes da mudança:', {
+      isSelectingNewPeriod,
+      selectedPeriod: {
+        from: selectedPeriod?.from ? format(selectedPeriod.from, 'dd/MM/yyyy') : null,
+        to: selectedPeriod?.to ? format(selectedPeriod.to, 'dd/MM/yyyy') : null
+      }
     });
 
+    // Se não recebeu range, limpa a seleção
     if (!range?.from) {
+      console.log('CLICK - Limpando seleção por falta de range');
       setSelectedPeriod({ from: null, to: null });
       setLastConfirmedPeriod({ from: null, to: null });
       setIsSelectingNewPeriod(false);
       return;
     }
 
-    const from = normalizeToLocalStartOfDay(range.from);
-    const to = range.to ? normalizeToLocalStartOfDay(range.to) : null;
+    const from = startOfDay(range.from);
+    const to = range.to ? startOfDay(range.to) : null;
 
-    // Sempre inicia um novo período com um único clique
-    if (!to) {
-      console.log('PeriodoConfig - Iniciando Novo Período:', dateToString(from));
-      setSelectedPeriod({ from, to: null });
-      setIsSelectingNewPeriod(true);
-      return;
-    }
+    // Se já está selecionando um período e recebeu uma data final
+    if (isSelectingNewPeriod && selectedPeriod.from && to) {
+      console.log('CLICK - Finalizando período existente:', {
+        existingFrom: format(selectedPeriod.from, 'dd/MM/yyyy'),
+        clickedDate: format(to, 'dd/MM/yyyy')
+      });
 
-    // Quando seleciona a data final
-    if (to) {
       const orderedDates = {
-        from: isBefore(from, to) ? from : to,
-        to: isBefore(from, to) ? to : from
+        from: isBefore(selectedPeriod.from, to) ? selectedPeriod.from : to,
+        to: isBefore(selectedPeriod.from, to) ? to : selectedPeriod.from
       };
       
-      console.log('PeriodoConfig - Período Final:', {
-        from: dateToString(orderedDates.from),
-        to: dateToString(orderedDates.to)
+      console.log('CLICK - Período final selecionado:', {
+        from: format(orderedDates.from, 'dd/MM/yyyy'),
+        to: format(orderedDates.to, 'dd/MM/yyyy')
       });
-      
+
       setSelectedPeriod(orderedDates);
 
       // Abre o modal com a data inicial do período
-      const dateStr = dateToString(orderedDates.from);
+      const dateStr = format(orderedDates.from, 'yyyy-MM-dd');
       const showReplicacao = verificarReplicacao(dateStr);
+
+      console.log('CLICK - Abrindo modal com:', {
+        dateStr,
+        showReplicacao,
+        horarios: datas[dateStr] || []
+      });
 
       setModalConfig({
         isOpen: true,
         dateKey: dateStr,
         horarios: datas[dateStr] || [],
-        showReplicacao
+        showReplicacao,
+        periodo: orderedDates
       });
+      return;
     }
+
+    // Qualquer outro clique inicia um novo período
+    console.log('CLICK - Iniciando novo período:', {
+      clickedDate: format(from, 'dd/MM/yyyy'),
+      wasSelectingBefore: isSelectingNewPeriod,
+      hadPreviousSelection: !!selectedPeriod.from
+    });
+
+    setSelectedPeriod({ from, to: null });
+    setIsSelectingNewPeriod(true);
+    
+    console.log('CLICK - Estado após mudança:', {
+      isSelectingNewPeriod: true,
+      selectedPeriod: {
+        from: format(from, 'dd/MM/yyyy'),
+        to: null
+      }
+    });
+    console.log('===================\n');
   };
 
   // Função para verificar se deve mostrar replicação
@@ -137,12 +158,24 @@ export default function PeriodoConfig({ datas = {}, onChange }) {
   };
 
   const handleHorarioConfirm = (horarioData) => {
-    console.log('PeriodoConfig - handleHorarioConfirm - Início:', {
-      selectedPeriod: {
-        from: dateToString(selectedPeriod.from),
-        to: dateToString(selectedPeriod.to)
+    console.log('\n=== handleHorarioConfirm ===');
+    console.log('Dados recebidos:', {
+      horarios: horarioData.horarios,
+      replicar: horarioData.replicar
+    });
+    console.log('Estado atual:', {
+      modalConfig: {
+        dateKey: modalConfig.dateKey,
+        showReplicacao: modalConfig.showReplicacao,
+        periodo: modalConfig.periodo ? {
+          from: format(modalConfig.periodo.from, 'dd/MM/yyyy'),
+          to: format(modalConfig.periodo.to, 'dd/MM/yyyy')
+        } : null
       },
-      horarios: horarioData
+      selectedPeriod: {
+        from: selectedPeriod?.from ? format(selectedPeriod.from, 'dd/MM/yyyy') : null,
+        to: selectedPeriod?.to ? format(selectedPeriod.to, 'dd/MM/yyyy') : null
+      }
     });
 
     const horariosArray = Array.isArray(horarioData.horarios) 
@@ -150,42 +183,45 @@ export default function PeriodoConfig({ datas = {}, onChange }) {
       : [];
 
     if (!horariosArray.length) {
+      console.log('Nenhum horário selecionado, fechando modal');
       setModalConfig({ isOpen: false, dateKey: null, horarios: [], showReplicacao: false });
       return;
     }
 
     const novasDatas = { ...datas };
     
-    // Garante que as datas estejam normalizadas antes de gerar o intervalo
+    // Sempre processa o range completo
     const periodoNormalizado = {
-      start: normalizeToLocalStartOfDay(selectedPeriod.from),
-      end: normalizeToLocalStartOfDay(selectedPeriod.to)
+      start: modalConfig.periodo.from,
+      end: modalConfig.periodo.to
     };
 
     const datasNoPeriodo = eachDayOfInterval(periodoNormalizado);
 
-    console.log('PeriodoConfig - handleHorarioConfirm - Datas geradas:', {
-      datasNoPeriodo: datasNoPeriodo.map(d => dateToString(d)),
-      periodo: {
-        from: dateToString(selectedPeriod.from),
-        to: dateToString(selectedPeriod.to)
-      }
-    });
+    console.log('Datas no período:', datasNoPeriodo.map(d => format(d, 'dd/MM/yyyy')));
 
-    datasNoPeriodo.forEach(date => {
-      const dateStr = dateToString(normalizeToLocalStartOfDay(date));
-      if (dateStr) {
+    // Se não houver replicação, atualiza apenas as datas do range atual
+    if (!horarioData.replicar) {
+      console.log('Sem replicação, atualizando range:', {
+        from: format(periodoNormalizado.start, 'dd/MM/yyyy'),
+        to: format(periodoNormalizado.end, 'dd/MM/yyyy')
+      });
+
+      datasNoPeriodo.forEach(date => {
+        const dateStr = format(date, 'yyyy-MM-dd');
+        if (dateStr) {
+          novasDatas[dateStr] = [...horariosArray];
+        }
+      });
+    } else {
+      // Se houver replicação, atualiza todas as datas existentes
+      console.log('Com replicação, atualizando todas as datas existentes');
+      Object.keys(datas).forEach(dateStr => {
         novasDatas[dateStr] = [...horariosArray];
-      }
-    });
+      });
+    }
 
-    console.log('PeriodoConfig - handleHorarioConfirm - Antes do onChange:', {
-      novasDatas: Object.keys(novasDatas).sort(),
-      selectedPeriod: {
-        from: dateToString(selectedPeriod.from),
-        to: dateToString(selectedPeriod.to)
-      }
-    });
+    console.log('Novas datas:', Object.keys(novasDatas).sort());
 
     // Salva o período atual como último confirmado
     setLastConfirmedPeriod({
@@ -196,6 +232,7 @@ export default function PeriodoConfig({ datas = {}, onChange }) {
     setModalConfig({ isOpen: false, dateKey: null, horarios: [], showReplicacao: false });
     setIsSelectingNewPeriod(false);
     onChange(novasDatas);
+    console.log('===================\n');
   };
 
   const handleModalClose = () => {
@@ -213,91 +250,86 @@ export default function PeriodoConfig({ datas = {}, onChange }) {
 
   // Obtém a lista de datas ordenadas
   const getDatasOrdenadas = () => {
-    // Usa apenas as datas que já têm horários configurados
-    const todasDatas = Object.entries(datas || {})
-      .map(([data, horarios]) => ({
-        data,
-        horarios
-      }))
-      .sort((a, b) => new Date(a.data) - new Date(b.data));
+    console.log('\n=== getDatasOrdenadas ===');
+    console.log('Datas recebidas:', datas);
     
-    return todasDatas;
+    const datasProcessadas = Object.entries(datas).map(([data, horarios]) => ({
+      data,
+      horarios,
+      dataFormatada: format(parseISO(data), "d 'de' MMMM", { locale: ptBR })
+    }));
+
+    const ordenadas = datasProcessadas.sort((a, b) => {
+      return parseISO(a.data) - parseISO(b.data);
+    });
+
+    console.log('Datas ordenadas:', ordenadas);
+    console.log('===================\n');
+
+    return ordenadas;
   };
 
   const datasOrdenadas = getDatasOrdenadas();
 
   return (
     <div className="space-y-6">
-      {/* Calendário */}
       <div className="bg-gray-800 rounded-lg p-4">
         <Calendar
-          mode="period"
-          selected={selectedPeriod}
-          onChange={handleDateSelect}
+          mode="range"
+          selected={{
+            from: selectedPeriod.from,
+            to: selectedPeriod.to
+          }}
+          onChange={(range) => {
+            console.log('\n=== Calendar onChange ===');
+            console.log('Range do Calendar:', range);
+            console.log('Selected Period:', selectedPeriod);
+
+            // Se já tem um período completo, qualquer clique inicia um novo
+            if (selectedPeriod.from && selectedPeriod.to && range?.from) {
+              console.log('CLICK - Iniciando novo período após período completo');
+              setSelectedPeriod({ from: range.from, to: null });
+              setIsSelectingNewPeriod(true);
+              return;
+            }
+
+            handleDateSelect(range);
+          }}
           minDate={startOfDay(new Date())}
           classNames={{
-            day_selected: "bg-orange-500 text-white hover:bg-orange-600",
-            day_today: "bg-gray-700 text-white"
+            day_selected: "bg-orange-500 text-white hover:bg-orange-600 font-semibold",
+            day_today: "bg-gray-700 text-white",
+            day_range_middle: "bg-orange-500/20 hover:bg-orange-500/30",
+            day_range_start: "bg-orange-500 text-white rounded-l-full font-semibold",
+            day_range_end: "bg-orange-500 text-white rounded-r-full font-semibold"
           }}
-          showPreview={isSelectingNewPeriod}
         />
       </div>
 
-      {/* Lista de datas */}
       <div className="space-y-4">
-        {datasOrdenadas.map(({ data, horarios }) => (
-          <div key={data} className="bg-gray-800 rounded-lg p-4">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h3 className="text-lg font-medium text-gray-100">
-                  {format(new Date(data), "dd 'de' MMMM", { locale: ptBR })}
-                </h3>
-                <p className="text-sm text-gray-400">
-                  {horarios?.length 
-                    ? `${horarios.length} horário${horarios.length !== 1 ? 's' : ''} configurado${horarios.length !== 1 ? 's' : ''}`
-                    : 'Clique para configurar horários'
-                  }
-                </p>
-              </div>
+        {datasOrdenadas.map(({ data, dataFormatada, horarios }) => (
+          <div
+            key={data}
+            className="bg-gray-800 rounded-lg p-4 space-y-2"
+          >
+            <div className="flex items-center justify-between">
+              <h3 className="text-gray-200">{dataFormatada}</h3>
               <button
-                onClick={() => {
-                  const novasDatas = { ...datas };
-                  delete novasDatas[data];
-                  
-                  onChange(novasDatas);
-                }}
-                className="text-gray-400 hover:text-gray-300"
-                title="Desmarcar data"
+                onClick={() => handleRemoveData(data)}
+                className="text-gray-400 hover:text-gray-300 transition-colors"
               >
-                <TrashIcon className="h-5 w-5" />
+                <TrashIcon className="w-4 h-4" />
               </button>
             </div>
-
-            <div 
-              className="text-gray-200 cursor-pointer bg-gray-700/50 rounded p-4 hover:bg-gray-700/70"
-              onClick={() => {
-                const showReplicacao = verificarReplicacao(data);
-
-                setModalConfig({
-                  isOpen: true,
-                  dateKey: data,
-                  horarios: horarios || [],
-                  showReplicacao
-                });
-              }}
-            >
-              {horarios?.length > 0 ? (
-                horarios.map((horario, index) => (
-                  <span key={index}>
-                    {formatHorario(horario)}
-                    {index < horarios.length - 1 && ', '}
-                  </span>
-                ))
-              ) : (
-                <div className="text-center text-gray-400">
-                  Clique para adicionar horários
-                </div>
-              )}
+            <div className="flex flex-wrap gap-2">
+              {horarios.map((horario, index) => (
+                <span
+                  key={`${data}-${index}`}
+                  className="bg-gray-700 text-gray-200 px-3 py-1 rounded-md text-sm"
+                >
+                  {formatHorario(horario)}
+                </span>
+              ))}
             </div>
           </div>
         ))}
@@ -308,7 +340,7 @@ export default function PeriodoConfig({ datas = {}, onChange }) {
         onClose={handleModalClose}
         onConfirm={handleHorarioConfirm}
         selectedHorarios={modalConfig.horarios}
-        data={modalConfig.dateKey ? new Date(modalConfig.dateKey) : null}
+        data={modalConfig.dateKey ? parseISO(modalConfig.dateKey) : null}
         showReplicacao={modalConfig.showReplicacao}
         tipoConfiguracao="periodo"
       />

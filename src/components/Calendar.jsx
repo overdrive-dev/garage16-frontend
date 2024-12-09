@@ -74,7 +74,7 @@ export default function Calendar({
     }
 
     switch (mode) {
-      case 'period': {
+      case 'range': {
         if (!showPreview) return false;
         
         if (!selected?.from) return isSameDay(day, hoveredDay);
@@ -106,7 +106,7 @@ export default function Calendar({
     }
 
     switch (mode) {
-      case 'period': {
+      case 'range': {
         const normalizedDate = normalizeToLocalStartOfDay(date);
         
         console.log('Calendar - handleDateClick:', {
@@ -161,7 +161,7 @@ export default function Calendar({
     }
 
     switch (mode) {
-      case 'period': {
+      case 'range': {
         if (!selected.from) return false;
         
         const normalizedDate = normalizeToLocalStartOfDay(date);
