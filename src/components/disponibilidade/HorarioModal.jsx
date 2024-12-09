@@ -1,7 +1,7 @@
 import { Dialog } from '@headlessui/react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { normalizeDate, isValidDate } from '@/utils/dateUtils';
 
 export default function HorarioModal({
@@ -27,6 +27,24 @@ export default function HorarioModal({
     sexta: false,
     sabado: false
   });
+
+  // Reseta os horários quando o modal abre com uma nova data
+  useEffect(() => {
+    if (isOpen) {
+      setHorarios(selectedHorarios);
+      setReplicarHorario(false);
+      setTipoReplicacao('nenhuma');
+      setDiasSemana({
+        domingo: false,
+        segunda: false,
+        terca: false,
+        quarta: false,
+        quinta: false,
+        sexta: false,
+        sabado: false
+      });
+    }
+  }, [isOpen, data, selectedHorarios]);
 
   const horariosDisponiveis = [
     '09:00', '10:00', '11:00', '12:00', '13:00',
