@@ -2,6 +2,7 @@ import { Fragment, useState, useEffect } from 'react';
 import { Dialog, Transition } from '@headlessui/react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { normalizeDate, isValidDate } from '@/utils/dateUtils';
 
 export default function HorarioModal({ 
   isOpen, 
@@ -78,9 +79,10 @@ export default function HorarioModal({
 
   const formatDate = (date) => {
     if (!date) return '';
-    if (tipoConfiguracao === 'semanal') return date; // Se for semanal, date já é o nome do dia
-    if (isNaN(date.getTime())) return 'Data inválida';
-    return format(date, "dd/MM/yyyy", { locale: ptBR });
+    if (tipoConfiguracao === 'semanal') return date;
+    if (!isValidDate(date)) return 'Data inválida';
+    const normalizedDate = normalizeDate(date);
+    return format(normalizedDate, "dd/MM/yyyy", { locale: ptBR });
   };
 
   return (
