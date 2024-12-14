@@ -6,9 +6,9 @@ export const normalizeDate = (date) => {
   
   let normalizedDate;
 
-  // Se já é uma data, usa ela diretamente
+  // Se já é uma data, clona para não modificar a original
   if (date instanceof Date) {
-    normalizedDate = date;
+    normalizedDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
   } else {
     // Se é string, primeiro tenta parsear como YYYY-MM-DD
     if (typeof date === 'string' && date.match(/^\d{4}-\d{2}-\d{2}$/)) {
@@ -16,17 +16,18 @@ export const normalizeDate = (date) => {
       normalizedDate = new Date(year, month - 1, day);
     } else {
       // Se não for no formato YYYY-MM-DD, usa o construtor padrão
-      normalizedDate = new Date(date);
+      const tempDate = new Date(date);
+      normalizedDate = new Date(
+        tempDate.getFullYear(),
+        tempDate.getMonth(),
+        tempDate.getDate()
+      );
     }
   }
 
-  // Ajusta para meia-noite no fuso horário local usando UTC
-  return new Date(
-    normalizedDate.getFullYear(),
-    normalizedDate.getMonth(),
-    normalizedDate.getDate(),
-    0, 0, 0, 0
-  );
+  // Garante que a data está no início do dia no fuso horário local
+  normalizedDate.setHours(0, 0, 0, 0);
+  return normalizedDate;
 };
 
 // Converte uma data para string no formato YYYY-MM-DD
@@ -50,4 +51,24 @@ export const isValidDate = (date) => {
   if (!date) return false;
   const d = new Date(date);
   return d instanceof Date && !isNaN(d);
+};
+
+// Obtém o dia da semana no formato correto (0 = domingo, 6 = sábado)
+export const getDayOfWeek = (date) => {
+  if (!date) return null;
+  const normalizedDate = normalizeDate(date);
+  if (!normalizedDate) return null;
+  return normalizedDate.getDay();
+};
+
+// Converte o índice do dia da semana para a string correta
+export const getDayString = (dayIndex) => {
+  const days = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sab'];
+  return days[dayIndex];
+};
+
+// Converte uma string de dia para o índice correto
+export const getDayIndex = (dayString) => {
+  const days = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sab'];
+  return days.indexOf(dayString);
 }; 

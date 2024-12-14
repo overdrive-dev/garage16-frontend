@@ -32,7 +32,23 @@ export const availabilityService = {
       // Se não existir, retorna estrutura padrão
       return {
         userId,
-        availableDays: {},
+        type: 'semanal',
+        config: {
+          weekDays: {
+            dom: { active: false, slots: [] },
+            seg: { active: false, slots: [] },
+            ter: { active: false, slots: [] },
+            qua: { active: false, slots: [] },
+            qui: { active: false, slots: [] },
+            sex: { active: false, slots: [] },
+            sab: { active: false, slots: [] }
+          },
+          dates: {},
+          range: {
+            start: null,
+            end: null
+          }
+        },
         metadata: {
           createdAt: serverTimestamp(),
           lastUpdate: serverTimestamp()
@@ -45,13 +61,13 @@ export const availabilityService = {
   },
 
   // Atualiza ou cria a disponibilidade de um usuário
-  async updateUserAvailability(userId, availableDays) {
+  async updateUserAvailability(userId, data) {
     try {
       const docRef = doc(db, USER_AVAILABILITY_COLLECTION, userId);
       
       await setDoc(docRef, {
         userId,
-        availableDays,
+        ...data,
         metadata: {
           lastUpdate: serverTimestamp(),
           createdAt: serverTimestamp() // Será sobrescrito se já existir
@@ -117,24 +133,61 @@ export const availabilityService = {
     }
   },
 
-  // Novo método para buscar slots disponíveis
+  // Busca slots disponíveis
   async getAvailableSlots() {
     try {
       console.log('Buscando slots disponíveis...');
       const slotsDoc = await getDoc(doc(db, 'availableSlots', 'default_store'));
-      
-      console.log('Documento encontrado:', slotsDoc.exists());
-      const data = slotsDoc.data();
-      console.log('Dados recebidos:', data);
       
       if (!slotsDoc.exists()) {
         console.log('Nenhum slot disponível encontrado');
         return { slots: {} };
       }
       
+      const data = slotsDoc.data();
+      console.log('Slots recebidos:', data);
       return data;
     } catch (error) {
       console.error('Erro ao buscar slots disponíveis:', error);
+      throw error;
+    }
+  },
+
+  // Função para limpar e recriar os dados
+  async resetUserAvailability(userId) {
+    try {
+      const docRef = doc(db, USER_AVAILABILITY_COLLECTION, userId);
+      
+      // Primeiro deleta os dados existentes
+      await setDoc(docRef, {
+        userId,
+        type: 'semanal',
+        config: {
+          weekDays: {
+            dom: { active: false, slots: [] },
+            seg: { active: false, slots: [] },
+            ter: { active: false, slots: [] },
+            qua: { active: false, slots: [] },
+            qui: { active: false, slots: [] },
+            sex: { active: false, slots: [] },
+            sab: { active: false, slots: [] }
+          },
+          dates: {},
+          range: {
+            start: null,
+            end: null
+          }
+        },
+        metadata: {
+          lastUpdate: serverTimestamp(),
+          createdAt: serverTimestamp()
+        }
+      });
+
+      console.log('Dados resetados com sucesso!');
+      return true;
+    } catch (error) {
+      console.error('Erro ao resetar dados:', error);
       throw error;
     }
   }

@@ -88,53 +88,6 @@ export default function Calendar({
   };
 
   const handleDateClick = (date) => {
-    // Normaliza a data para o fuso hor��rio local
-    const localDate = normalizeDate(date);
-
-    if (weekView) {
-      if (!isDateDisabled(localDate)) {
-        onChange([localDate]);
-      }
-      return;
-    }
-
-    switch (mode) {
-      case 'range': {
-        if (!selected?.from || (selected.from && selected.to)) {
-          onChange({ 
-            from: localDate, 
-            to: null 
-          });
-        } else {
-          onChange({ 
-            from: selected.from,
-            to: localDate
-          });
-        }
-        break;
-      }
-      case 'multiple': {
-        if (!isDateDisabled(localDate)) {
-          const currentSelected = Array.isArray(selected) ? selected : [];
-          const dateExists = currentSelected.some(d => isSameDay(d, localDate));
-          onChange(localDate);
-        }
-        break;
-      }
-      case 'single':
-        if (!isDateDisabled(localDate)) {
-          onChange(localDate);
-        }
-        break;
-      default:
-        if (!isDateDisabled(localDate)) {
-          onChange([localDate]);
-        }
-        break;
-    }
-  };
-
-  const handleDateClick = (date) => {
     if (isDateDisabled(date)) return;
 
     // Cria uma nova data usando os componentes da data original
@@ -177,8 +130,6 @@ export default function Calendar({
 
   const isDateSelected = (date) => {
     if (!selected) return false;
-    
-    const normalizedDate = new Date(date);
     
     const normalizedDate = normalizeDate(date);
     const today = startOfToday();
