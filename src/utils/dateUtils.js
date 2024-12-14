@@ -9,9 +9,11 @@ export const normalizeDate = (date) => {
 
 // Converte uma data para string no formato YYYY-MM-DD
 export const normalizeDateString = (date) => {
-  const normalized = normalizeDate(date);
-  // Adiciona um dia para compensar o fuso horário na string
-  return normalized ? format(addDays(normalized, 1), 'yyyy-MM-dd') : null;
+  if (!date) return null;
+  const normalized = new Date(date);
+  // Ajusta para o fuso horário local
+  normalized.setMinutes(normalized.getMinutes() + normalized.getTimezoneOffset());
+  return format(normalized, 'yyyy-MM-dd');
 };
 
 // Verifica se uma data é válida

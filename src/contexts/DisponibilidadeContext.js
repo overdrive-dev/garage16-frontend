@@ -10,8 +10,7 @@ const DisponibilidadeContext = createContext({});
 const disponibilidadePadrao = {
   tipo: 'semanal',
   dataUnica: {
-    horarios: {},
-    ultimoHorario: []
+    horarios: {}
   },
   semanal: {
     dom: { ativo: false, horarios: [] },
@@ -20,61 +19,111 @@ const disponibilidadePadrao = {
     qua: { ativo: false, horarios: [] },
     qui: { ativo: false, horarios: [] },
     sex: { ativo: false, horarios: [] },
-    sab: { ativo: false, horarios: [] },
-    ultimoHorario: []
+    sab: { ativo: false, horarios: [] }
   },
   faixaHorario: {
     dataInicio: new Date().toISOString().split('T')[0],
     dataFim: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-    horarios: {},
-    ultimoHorario: []
+    horarios: {}
   }
 };
 
-// Função auxiliar para converter disponibilidade do formato do Firebase para o frontend
-const convertFromFirebase = (firebaseData) => {
-  if (!firebaseData?.availableDays) return disponibilidadePadrao;
+// Função para criar disponibilidade padrão baseada nas configurações da loja
+const createDefaultAvailability = (storeSettings) => {
+  const defaultData = { ...disponibilidadePadrao };
+  
+  // Aplica as configurações da loja
+  if (storeSettings?.weekDays) {
+    Object.entries(storeSettings.weekDays).forEach(([dia, config]) => {
+      defaultData.semanal[dia] = {
+        ativo: config.active !== false && config.slots?.length > 0,
+        horarios: []
+      };
+    });
+  }
+  
+  return defaultData;
+};
 
-  console.log('convertFromFirebase - Dados recebidos:', firebaseData);
+// Função auxiliar para converter do frontend para o Firebase
+const convertToFirebase = (frontendData) => {
+  console.log('Convertendo dados do frontend:', frontendData);
 
-  // Pega o tipo de agendamento do Firebase ou usa o padrão 'semanal'
-  // Prioriza scheduleType, mas usa activeType se scheduleType não existir
-  const scheduleType = firebaseData.availableDays.scheduleType || 
-                      firebaseData.availableDays.activeType || 
-                      'semanal';
-
-  console.log('convertFromFirebase - Tipo detectado:', scheduleType);
-
-  // Prepara a estrutura de data única
-  const dataUnica = {
-    horarios: {}
+  const firebaseData = {
+    availableDays: {
+      type: frontendData.tipo,
+      config: {
+        weekDays: {
+          dom: { active: false, slots: [] },
+          seg: { active: false, slots: [] },
+          ter: { active: false, slots: [] },
+          qua: { active: false, slots: [] },
+          qui: { active: false, slots: [] },
+          sex: { active: false, slots: [] },
+          sab: { active: false, slots: [] }
+        },
+        dates: {},
+        range: {
+          start: null,
+          end: null
+        }
+      }
+    },
+    metadata: {
+      lastUpdate: new Date().toISOString()
+    }
   };
 
-  // Prepara a estrutura semanal com todos os dias inativos
-  const semanal = {
-    dom: { ativo: false, horarios: [] },
-    seg: { ativo: false, horarios: [] },
-    ter: { ativo: false, horarios: [] },
-    qua: { ativo: false, horarios: [] },
-    qui: { ativo: false, horarios: [] },
-    sex: { ativo: false, horarios: [] },
-    sab: { ativo: false, horarios: [] }
-  };
+  if (frontendData.tipo === 'semanal') {
+    // Converte configuração semanal padrão
+    Object.entries(frontendData.semanal).forEach(([dia, config]) => {
+      firebaseData.availableDays.config.weekDays[dia] = {
+        active: config.ativo,
+        slots: config.horarios
+      };
+    });
+  }
+  else if (frontendData.tipo === 'dataUnica') {
+    // Converte datas únicas
+    Object.entries(frontendData.dataUnica.horarios).forEach(([data, horarios]) => {
+      if (horarios.length > 0) {
+        firebaseData.availableDays.config.dates[data] = horarios;
+      }
+    });
+  }
+  else if (frontendData.tipo === 'faixaHorario') {
+    // Converte faixa de horário
+    firebaseData.availableDays.config.range = {
+      start: frontendData.faixaHorario.dataInicio,
+      end: frontendData.faixaHorario.dataFim
+    };
 
-  // Se houver datas configuradas, converte para o formato apropriado
-  const todasDatas = Object.entries(firebaseData.availableDays)
-    .filter(([key, data]) => key !== 'scheduleType' && key !== 'activeType' && data.slots?.length > 0)
-    .sort((a, b) => new Date(b[0]) - new Date(a[0])); // Ordena por data, mais recente primeiro
+    // Processa os horários padrão do range
+    Object.entries(frontendData.faixaHorario.horarios).forEach(([data, horarios]) => {
+      if (horarios.length > 0) {
+        firebaseData.availableDays.config.dates[data] = horarios;
+      }
+    });
+  }
 
-  console.log('convertFromFirebase - Datas encontradas:', todasDatas.length);
+  console.log('Dados convertidos para Firebase:', firebaseData);
+  return firebaseData;
+};
 
-  // Pega o último horário configurado (o mais recente)
-  const ultimoHorario = todasDatas[0]?.[1].slots || [];
+// Função auxiliar para converter do Firebase para o frontend
+const convertFromFirebase = (firebaseData, storeSettings) => {
+  console.log('Convertendo dados do Firebase:', firebaseData);
+  console.log('Configurações da loja:', storeSettings);
 
-  // Se for semanal, primeiro identifica quais dias da semana têm horários
-  if (scheduleType === 'semanal') {
-    // Cria um mapa dos dias da semana com seus horários
-    const diasDaSemana = {
+  // Se não houver dados, retorna o padrão baseado nas configurações da loja
+  if (!firebaseData?.availableDays) return createDefaultAvailability(storeSettings);
+
+  const frontendData = {
+    tipo: firebaseData.availableDays.type,
+    dataUnica: {
+      horarios: {}
+    },
+    semanal: {
       dom: { ativo: false, horarios: [] },
       seg: { ativo: false, horarios: [] },
       ter: { ativo: false, horarios: [] },
@@ -82,158 +131,132 @@ const convertFromFirebase = (firebaseData) => {
       qui: { ativo: false, horarios: [] },
       sex: { ativo: false, horarios: [] },
       sab: { ativo: false, horarios: [] }
-    };
-
-    // Para cada data no Firebase, marca o dia da semana correspondente como ativo
-    todasDatas.forEach(([date, data]) => {
-      const dayOfWeek = new Date(date).getDay();
-      const weekDay = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sab'][dayOfWeek];
-      
-      // Se já não estiver configurado, configura o dia
-      if (!diasDaSemana[weekDay].ativo) {
-        diasDaSemana[weekDay] = {
-          ativo: true,
-          horarios: data.slots
-        };
-      }
-    });
-
-    // Atualiza a estrutura semanal com os dias ativos
-    Object.assign(semanal, diasDaSemana);
-  }
-  // Para outros tipos, processa normalmente
-  else if (scheduleType === 'dataUnica') {
-    todasDatas.forEach(([date, data]) => {
-      dataUnica.horarios[date] = data.slots;
-    });
-  }
-
-  // Prepara a estrutura de faixa de horário
-  const hoje = new Date();
-  const proximaSemana = new Date();
-  proximaSemana.setDate(hoje.getDate() + 7);
-
-  const faixaHorario = {
-    dataInicio: hoje.toISOString().split('T')[0],
-    dataFim: proximaSemana.toISOString().split('T')[0],
-    horarios: {}
-  };
-
-  // Se houver datas configuradas para faixa de horário, usa elas
-  if (scheduleType === 'faixaHorario' && todasDatas.length > 0) {
-    faixaHorario.dataInicio = todasDatas[todasDatas.length - 1][0]; // Primeira data
-    faixaHorario.dataFim = todasDatas[0][0]; // Última data
-
-    // Preenche os horários com as datas
-    todasDatas.forEach(([date, data]) => {
-      faixaHorario.horarios[date] = data.slots;
-    });
-  }
-
-  const result = {
-    tipo: scheduleType,
-    semanal: {
-      ...semanal,
-      ultimoHorario
-    },
-    dataUnica: {
-      ...dataUnica,
-      ultimoHorario
     },
     faixaHorario: {
-      ...faixaHorario,
-      ultimoHorario
+      dataInicio: new Date().toISOString().split('T')[0],
+      dataFim: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      horarios: {}
     }
   };
 
-  console.log('convertFromFirebase - Resultado final:', result);
-  return result;
-};
-
-// Função auxiliar para converter disponibilidade do formato do frontend para o Firebase
-const convertToFirebase = (frontendData) => {
-  console.log('convertToFirebase - Dados recebidos:', frontendData);
-
-  // Primeiro, limpa todos os dados existentes
-  const availableDays = {
-    scheduleType: frontendData.tipo,
-    // Remove o activeType se existir
-    activeType: null
+  // Função auxiliar para verificar se um dia está disponível na loja
+  const isDiaDisponivelNaLoja = (diaSemana) => {
+    const diaConfig = storeSettings?.weekDays?.[diaSemana];
+    return diaConfig?.active !== false && diaConfig?.slots?.length > 0;
   };
 
-  // Se for configuração semanal
-  if (frontendData.tipo === 'semanal') {
-    console.log('convertToFirebase - Processando modo semanal');
-    // Para os próximos 30 dias
-    const hoje = new Date();
-    const datas = [];
+  // Função auxiliar para verificar se um horário está disponível na loja
+  const isHorarioDisponivelNaLoja = (diaSemana, horario) => {
+    return storeSettings?.weekDays?.[diaSemana]?.slots?.includes(horario);
+  };
 
-    // Primeiro, gera todas as datas dos próximos 30 dias
-    for (let i = 0; i < 30; i++) {
-      const date = new Date(hoje);
-      date.setDate(hoje.getDate() + i);
-      datas.push(date);
-    }
-
-    // Depois, para cada data, verifica se o dia da semana está ativo
-    datas.forEach(date => {
-      const weekDay = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sab'][date.getDay()];
-      const diaSemana = frontendData.semanal[weekDay];
-      const dateStr = date.toISOString().split('T')[0];
-
-      // Só adiciona se o dia estiver ativo E tiver horários
-      if (diaSemana?.ativo && diaSemana.horarios?.length > 0) {
-        availableDays[dateStr] = {
-          slots: diaSemana.horarios
-        };
-      }
-    });
-    console.log('convertToFirebase - Dados processados para semanal:', availableDays);
-  }
-  // Se for data única
-  else if (frontendData.tipo === 'dataUnica') {
-    // Limpa todos os dados existentes primeiro
-    Object.entries(frontendData.dataUnica.horarios || {}).forEach(([date, horarios]) => {
-      if (horarios?.length > 0) {
-        availableDays[date] = {
-          slots: horarios
-        };
-      }
-    });
-  }
-  // Se for faixa de horário
-  else if (frontendData.tipo === 'faixaHorario') {
-    const start = new Date(frontendData.faixaHorario.dataInicio);
-    const end = new Date(frontendData.faixaHorario.dataFim);
-    
-    for (let date = new Date(start); date <= end; date.setDate(date.getDate() + 1)) {
-      const dateStr = date.toISOString().split('T')[0];
-      const horarios = frontendData.faixaHorario.horarios[dateStr];
+  // Converte configuração semanal
+  if (firebaseData.availableDays.type === 'semanal') {
+    // Converte configuração padrão dos dias da semana
+    Object.entries(firebaseData.availableDays.config.weekDays).forEach(([dia, config]) => {
+      // Verifica se o dia está disponível na loja
+      const diaEstaDisponivel = isDiaDisponivelNaLoja(dia);
       
-      if (horarios?.length > 0) {
-        availableDays[dateStr] = {
-          slots: horarios
-        };
+      // Filtra os horários do usuário para manter apenas os que estão disponíveis na loja
+      const horariosPermitidos = config.slots.filter(horario => 
+        isHorarioDisponivelNaLoja(dia, horario)
+      );
+      
+      frontendData.semanal[dia] = {
+        ativo: diaEstaDisponivel && config.active && horariosPermitidos.length > 0,
+        horarios: diaEstaDisponivel ? horariosPermitidos : []
+      };
+    });
+  }
+  // Converte datas únicas
+  else if (firebaseData.availableDays.type === 'dataUnica') {
+    Object.entries(firebaseData.availableDays.config.dates).forEach(([data, slots]) => {
+      // Verifica se a data está bloqueada nas configurações da loja
+      const dataEstaDisponivel = !storeSettings?.blockedDates?.includes(data);
+      
+      if (dataEstaDisponivel) {
+        // Pega o dia da semana desta data
+        const diaDaSemana = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sab'][new Date(data).getDay()];
+        
+        // Verifica se o dia da semana está disponível
+        if (isDiaDisponivelNaLoja(diaDaSemana)) {
+          // Filtra os horários para manter apenas os que estão disponíveis na loja
+          const horariosPermitidos = slots.filter(horario => 
+            isHorarioDisponivelNaLoja(diaDaSemana, horario)
+          );
+          
+          if (horariosPermitidos.length > 0) {
+            frontendData.dataUnica.horarios[data] = horariosPermitidos;
+          }
+        }
       }
-    }
+    });
+  }
+  // Converte faixa de horário
+  else if (firebaseData.availableDays.type === 'faixaHorario') {
+    frontendData.faixaHorario = {
+      dataInicio: firebaseData.availableDays.config.range.start,
+      dataFim: firebaseData.availableDays.config.range.end,
+      horarios: {}
+    };
+
+    // Processa os horários padrão
+    Object.entries(firebaseData.availableDays.config.dates || {}).forEach(([data, slots]) => {
+      // Verifica se a data está bloqueada nas configurações da loja
+      const dataEstaDisponivel = !storeSettings?.blockedDates?.includes(data);
+      
+      if (dataEstaDisponivel) {
+        // Pega o dia da semana desta data
+        const diaDaSemana = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sab'][new Date(data).getDay()];
+        
+        // Verifica se o dia da semana está disponível
+        if (isDiaDisponivelNaLoja(diaDaSemana)) {
+          // Filtra os horários para manter apenas os que estão disponíveis na loja
+          const horariosPermitidos = slots.filter(horario => 
+            isHorarioDisponivelNaLoja(diaDaSemana, horario)
+          );
+          
+          if (horariosPermitidos.length > 0) {
+            frontendData.faixaHorario.horarios[data] = horariosPermitidos;
+          }
+        }
+      }
+    });
   }
 
-  // Remove o activeType se for null
-  if (availableDays.activeType === null) {
-    delete availableDays.activeType;
-  }
-
-  console.log('convertToFirebase - Dados finais para Firebase:', availableDays);
-  return availableDays;
+  console.log('Dados convertidos para frontend:', frontendData);
+  return frontendData;
 };
 
 export function DisponibilidadeProvider({ children }) {
   const { user } = useAuth();
   const [disponibilidade, setDisponibilidade] = useState(null);
-  const [currentConfig, setCurrentConfig] = useState(disponibilidadePadrao);
+  const [currentConfig, setCurrentConfig] = useState(null);
   const [hasChanges, setHasChanges] = useState(false);
   const [storeSettings, setStoreSettings] = useState(null);
+  const [availableSlots, setAvailableSlots] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  // Carrega slots disponíveis
+  useEffect(() => {
+    const loadAvailableSlots = async () => {
+      try {
+        const { slots } = await availabilityService.getAvailableSlots();
+        setAvailableSlots(slots);
+      } catch (error) {
+        console.error('Erro ao carregar slots disponíveis:', error);
+      }
+    };
+
+    loadAvailableSlots();
+  }, []);
+
+  // Quando as configurações da loja são carregadas, atualiza o currentConfig inicial
+  useEffect(() => {
+    if (storeSettings) {
+      setCurrentConfig(createDefaultAvailability(storeSettings));
+    }
+  }, [storeSettings]);
 
   // Quando a disponibilidade é carregada, atualiza o currentConfig
   useEffect(() => {
@@ -330,7 +353,8 @@ export function DisponibilidadeProvider({ children }) {
           const data = await availabilityService.getUserAvailability(user.uid);
           console.log('fetchDisponibilidade - Dados recebidos do Firebase:', data);
           
-          const convertedData = convertFromFirebase(data);
+          // Passa as configurações da loja para a função de conversão
+          const convertedData = convertFromFirebase(data, storeSettings);
           console.log('fetchDisponibilidade - Dados convertidos para frontend:', convertedData);
           
           setDisponibilidade(convertedData);
@@ -342,8 +366,11 @@ export function DisponibilidadeProvider({ children }) {
       }
     };
 
-    fetchDisponibilidade();
-  }, [user]);
+    // Só carrega a disponibilidade quando tivermos as configurações da loja
+    if (storeSettings) {
+      fetchDisponibilidade();
+    }
+  }, [user, storeSettings]); // Adiciona storeSettings como dependência
 
   const updateCurrentConfig = (updates) => {
     setCurrentConfig(typeof updates === 'function' 
@@ -385,6 +412,7 @@ export function DisponibilidadeProvider({ children }) {
         hasChanges,
         updateDisponibilidade,
         storeSettings,
+        availableSlots,
         loading 
       }}
     >

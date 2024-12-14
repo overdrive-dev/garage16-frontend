@@ -3,6 +3,7 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useState, useEffect } from 'react';
 import { normalizeDate, isValidDate } from '@/utils/dateUtils';
+import { useDisponibilidade } from '@/contexts/DisponibilidadeContext';
 
 export default function HorarioModal({
   isOpen,
@@ -13,8 +14,11 @@ export default function HorarioModal({
   showReplicacao,
   tipoConfiguracao,
   isNewRange,
-  periodo
+  periodo,
+  diaSemana,
+  horariosDisponiveis = []
 }) {
+  const { storeSettings } = useDisponibilidade();
   const [horarios, setHorarios] = useState(selectedHorarios);
   const [replicarHorario, setReplicarHorario] = useState(false);
   const [tipoReplicacao, setTipoReplicacao] = useState('nenhuma');
@@ -31,7 +35,9 @@ export default function HorarioModal({
   // Reseta os horários quando o modal abre com uma nova data
   useEffect(() => {
     if (isOpen) {
-      setHorarios(selectedHorarios);
+      if (JSON.stringify(horarios) !== JSON.stringify(selectedHorarios)) {
+        setHorarios(selectedHorarios);
+      }
       setReplicarHorario(false);
       setTipoReplicacao('nenhuma');
       setDiasSemana({
@@ -44,14 +50,26 @@ export default function HorarioModal({
         sabado: false
       });
     }
-  }, [isOpen, data, selectedHorarios]);
+  }, [isOpen, data]);
 
-  const horariosDisponiveis = [
-    '09:00', '10:00', '11:00', '12:00', '13:00',
-    '14:00', '15:00', '16:00', '17:00'
-  ];
+  // Verifica se um horário está disponível para o dia da semana
+  const isHorarioDisponivel = (horario) => {
+    if (!diaSemana) return true;
+    return storeSettings?.weekDays?.[diaSemana]?.slots?.includes(horario);
+  };
+
+  // Pega os horários disponíveis para o dia atual
+  const getHorariosDisponiveis = () => {
+    if (!diaSemana || !storeSettings?.weekDays?.[diaSemana]?.slots) {
+      return horariosDisponiveis;
+    }
+    return storeSettings.weekDays[diaSemana].slots;
+  };
 
   const toggleHorario = (horario) => {
+    // Verifica se o horário está disponível antes de permitir a seleção
+    if (!isHorarioDisponivel(horario)) return;
+
     setHorarios(
       horarios.includes(horario)
         ? horarios.filter(h => h !== horario)
@@ -60,10 +78,13 @@ export default function HorarioModal({
   };
 
   const handleConfirm = () => {
+    // Filtra apenas os horários que estão disponíveis na loja
+    const horariosPermitidos = horarios.filter(horario => isHorarioDisponivel(horario));
+
     // Se é configuração de período com edição individual
     if (tipoConfiguracao === 'periodo' && !isNewRange) {
       onConfirm({
-        horarios,
+        horarios: horariosPermitidos,
         replicar: tipoReplicacao !== 'nenhuma',
         diasSemana: tipoReplicacao === 'diasSemana' ? 
           Object.entries(diasSemana)
@@ -74,7 +95,7 @@ export default function HorarioModal({
     } else {
       // Para data única e semanal, mantém o comportamento original
       onConfirm({
-        horarios,
+        horarios: horariosPermitidos,
         replicar: replicarHorario
       });
     }
@@ -198,20 +219,25 @@ export default function HorarioModal({
           )}
 
           <div className="grid grid-cols-3 gap-2 mb-4">
-            {horariosDisponiveis.map((horario) => (
-              <button
-                key={horario}
-                onClick={() => toggleHorario(horario)}
-                className={`
-                  p-2 rounded-md text-sm font-medium transition-colors
-                  ${horarios.includes(horario)
-                    ? 'bg-orange-500 text-white hover:bg-orange-600'
-                    : 'bg-gray-700 text-gray-200 hover:bg-gray-600'}
-                `}
-              >
-                {horario}
-              </button>
-            ))}
+            {getHorariosDisponiveis().map((horario) => {
+              const disponivel = isHorarioDisponivel(horario);
+              return (
+                <button
+                  key={horario}
+                  onClick={() => toggleHorario(horario)}
+                  disabled={!disponivel}
+                  className={`
+                    p-2 rounded-md text-sm font-medium transition-colors
+                    ${!disponivel ? 'opacity-50 cursor-not-allowed bg-gray-700 text-gray-400' :
+                      horarios.includes(horario)
+                        ? 'bg-orange-500 text-white hover:bg-orange-600'
+                        : 'bg-gray-700 text-gray-200 hover:bg-gray-600'}
+                  `}
+                >
+                  {horario}
+                </button>
+              );
+            })}
           </div>
 
           {isNewRange && periodo && horarios.length > 0 && (

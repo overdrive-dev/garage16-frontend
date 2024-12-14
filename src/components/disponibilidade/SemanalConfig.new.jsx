@@ -5,7 +5,6 @@ import { format, isAfter, startOfDay, eachDayOfInterval, endOfMonth } from 'date
 import { ptBR } from 'date-fns/locale';
 import { TrashIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
 import { useDisponibilidade } from '@/contexts/DisponibilidadeContext';
-import { normalizeDate, normalizeDateString } from '@/utils/dateUtils';
 
 const diasDaSemana = [
   { key: 'dom', label: 'Domingo' },
@@ -19,27 +18,6 @@ const diasDaSemana = [
 
 export default function SemanalConfig({ horarios, onChange, datasDisponiveis = [] }) {
   const { storeSettings } = useDisponibilidade();
-  
-  // Log das configurações da loja
-  useEffect(() => {
-    console.log('Configurações da loja:', {
-      storeSettings,
-      weekDays: storeSettings?.weekDays,
-      horarios,
-      datasDisponiveis
-    });
-
-    // Verifica cada dia da semana
-    diasDaSemana.forEach(({ key, label }) => {
-      console.log(`Verificando configuração do ${label}:`, {
-        key,
-        config: storeSettings?.weekDays?.[key],
-        active: storeSettings?.weekDays?.[key]?.active,
-        slots: storeSettings?.weekDays?.[key]?.slots
-      });
-    });
-  }, [storeSettings, horarios, datasDisponiveis]);
-
   const [modalConfig, setModalConfig] = useState({
     isOpen: false,
     diaSemana: null,
@@ -51,21 +29,11 @@ export default function SemanalConfig({ horarios, onChange, datasDisponiveis = [
 
   // Verifica se um dia está disponível nas configurações da loja
   const isDiaDisponivelNaLoja = (diaSemana) => {
-    const diaConfig = storeSettings?.weekDays?.[diaSemana];
-    console.log('Verificando disponibilidade do dia:', {
-      diaSemana,
-      config: diaConfig,
-      active: diaConfig?.active,
-      slots: diaConfig?.slots,
-      resultado: diaConfig?.active !== false && diaConfig?.slots?.length > 0
-    });
-    return diaConfig?.active !== false && diaConfig?.slots?.length > 0;
+    return storeSettings?.weekDays?.[diaSemana]?.active !== false;
   };
 
   // Verifica se uma data está disponível para configuração
   const isDataDisponivel = (date) => {
-    if (!date) return false;
-    
     // Primeiro verifica se o dia da semana está disponível na loja
     const diaSemana = diasDaSemana[date.getDay()].key;
     if (!isDiaDisponivelNaLoja(diaSemana)) return false;
@@ -73,11 +41,13 @@ export default function SemanalConfig({ horarios, onChange, datasDisponiveis = [
     // Se não houver lista de datas disponíveis, considera todas disponíveis
     if (!datasDisponiveis.length) return true;
     
-    // Normaliza a data para comparação
-    const dateStr = normalizeDateString(date);
-    
     // Verifica se a data está na lista de datas disponíveis
-    return datasDisponiveis.some(dataDisp => normalizeDateString(dataDisp) === dateStr);
+    return datasDisponiveis.some(dataDisp => {
+      const dataDispDate = new Date(dataDisp);
+      return date.getDate() === dataDispDate.getDate() &&
+             date.getMonth() === dataDispDate.getMonth() &&
+             date.getFullYear() === dataDispDate.getFullYear();
+    });
   };
 
   // Verifica se um dia da semana está ativo
@@ -87,16 +57,16 @@ export default function SemanalConfig({ horarios, onChange, datasDisponiveis = [
 
   // Converte os dias ativos em datas para o calendário
   const getDiasAtivos = () => {
-    const hoje = normalizeDate(new Date());
+    const hoje = startOfDay(new Date());
     const todasDatasDoMes = eachDayOfInterval({
-      start: hoje,
+      start: startOfDay(hoje),
       end: endOfMonth(hoje)
     });
 
     return todasDatasDoMes.filter(data => {
       const diaSemana = diasDaSemana[data.getDay()].key;
       const diaAtivo = isDiaSemanaAtivo(diaSemana);
-      const isFutureDate = isAfter(normalizeDate(data), hoje);
+      const isFutureDate = isAfter(startOfDay(data), startOfDay(new Date()));
       return diaAtivo && isFutureDate && isDataDisponivel(data);
     });
   };
@@ -105,7 +75,7 @@ export default function SemanalConfig({ horarios, onChange, datasDisponiveis = [
 
   const handleCalendarSelect = (dates) => {
     console.log('\n=== handleCalendarSelect ===');
-    console.log('Datas selecionadas:', dates?.map(d => normalizeDateString(d)));
+    console.log('Datas selecionadas:', dates?.map(d => d.toISOString().split('T')[0]));
     
     if (!dates || !dates.length) return;
     
@@ -119,7 +89,7 @@ export default function SemanalConfig({ horarios, onChange, datasDisponiveis = [
     }
 
     if (!isDataDisponivel(date)) {
-      console.log('Data não disponível:', normalizeDateString(date));
+      console.log('Data não disponível:', date.toISOString().split('T')[0]);
       return;
     }
 
@@ -281,43 +251,8 @@ export default function SemanalConfig({ horarios, onChange, datasDisponiveis = [
   const isDateActive = (date) => {
     const diaSemana = diasDaSemana[date.getDay()].key;
     const isAtivo = isDiaSemanaAtivo(diaSemana);
-    const isFutureDate = isAfter(normalizeDate(date), normalizeDate(new Date()));
+    const isFutureDate = isAfter(startOfDay(date), startOfDay(new Date()));
     return isAtivo && isFutureDate;
-  };
-
-  // Função para verificar se uma data está desabilitada
-  const isDateDisabled = (date) => {
-    if (!date) return true;
-    
-    // Primeiro verifica se o dia da semana está disponível na loja
-    const diaSemana = diasDaSemana[date.getDay()].key;
-    if (!isDiaDisponivelNaLoja(diaSemana)) {
-      console.log('Data desabilitada - dia não disponível na loja:', {
-        data: date,
-        diaSemana,
-        disponivel: isDiaDisponivelNaLoja(diaSemana)
-      });
-      return true;
-    }
-    
-    // Se não houver lista de datas disponíveis, considera todas disponíveis
-    if (!datasDisponiveis.length) return false;
-    
-    // Normaliza a data para comparação
-    const dateStr = normalizeDateString(date);
-    
-    // Verifica se a data está na lista de datas disponíveis
-    const isDisabled = !datasDisponiveis.some(dataDisp => normalizeDateString(dataDisp) === dateStr);
-    
-    if (isDisabled) {
-      console.log('Data desabilitada - não está na lista de datas disponíveis:', {
-        data: date,
-        dateStr,
-        datasDisponiveis: datasDisponiveis.map(d => normalizeDateString(d))
-      });
-    }
-    
-    return isDisabled;
   };
 
   return (
@@ -339,8 +274,11 @@ export default function SemanalConfig({ horarios, onChange, datasDisponiveis = [
           selected={diasAtivos}
           onChange={handleCalendarSelect}
           weekView={true}
-          minDate={normalizeDate(new Date())}
-          disabledDates={isDateDisabled}
+          minDate={startOfDay(new Date())}
+          disabledDates={datasDisponiveis.length > 0 ? 
+            (date) => !isDataDisponivel(date) 
+            : undefined
+          }
           onDayMouseEnter={handleDayMouseEnter}
           onDayMouseLeave={handleDayMouseLeave}
           classNames={{
@@ -415,4 +353,4 @@ export default function SemanalConfig({ horarios, onChange, datasDisponiveis = [
       />
     </div>
   );
-}
+} 

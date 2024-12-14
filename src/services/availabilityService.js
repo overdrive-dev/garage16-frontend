@@ -71,12 +71,34 @@ export const availabilityService = {
       
       // Se não existir, retorna configurações padrão
       return {
-        workingDays: ["1", "2", "3", "4", "5"], // seg a sex
-        holidays: [],
-        businessHours: {
-          start: "09:00",
-          end: "18:00"
+        weekDays: {
+          dom: { active: false, slots: [] },
+          seg: { 
+            active: true, 
+            slots: ["09:00","10:00","11:00","12:00","13:00","14:00","15:00","16:00","17:00","18:00"]
+          },
+          ter: { 
+            active: true, 
+            slots: ["09:00","10:00","11:00","12:00","13:00","14:00","15:00","16:00","17:00","18:00"]
+          },
+          qua: { 
+            active: true, 
+            slots: ["09:00","10:00","11:00","12:00","13:00","14:00","15:00","16:00","17:00","18:00"]
+          },
+          qui: { 
+            active: true, 
+            slots: ["09:00","10:00","11:00","12:00","13:00","14:00","15:00","16:00","17:00","18:00"]
+          },
+          sex: { 
+            active: true, 
+            slots: ["09:00","10:00","11:00","12:00","13:00","14:00","15:00","16:00","17:00","18:00"]
+          },
+          sab: { 
+            active: true, 
+            slots: ["09:00","10:00","11:00","12:00","13:00","14:00","15:00"]
+          }
         },
+        blockedDates: [],
         metadata: {
           lastUpdate: serverTimestamp(),
           updatedBy: 'system'
@@ -84,6 +106,28 @@ export const availabilityService = {
       };
     } catch (error) {
       console.error('Erro ao buscar configurações da loja:', error);
+      throw error;
+    }
+  },
+
+  // Novo método para buscar slots disponíveis
+  async getAvailableSlots() {
+    try {
+      console.log('Buscando slots disponíveis...');
+      const slotsDoc = await getDoc(doc(db, 'availableSlots', 'default_store'));
+      
+      console.log('Documento encontrado:', slotsDoc.exists());
+      const data = slotsDoc.data();
+      console.log('Dados recebidos:', data);
+      
+      if (!slotsDoc.exists()) {
+        console.log('Nenhum slot disponível encontrado');
+        return { slots: {} };
+      }
+      
+      return data;
+    } catch (error) {
+      console.error('Erro ao buscar slots disponíveis:', error);
       throw error;
     }
   }

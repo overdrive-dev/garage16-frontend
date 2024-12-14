@@ -1,19 +1,62 @@
-import { useState } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import HorarioModal from './HorarioModal';
 import Calendar from '@/components/Calendar';
 import { TrashIcon } from '@heroicons/react/24/outline';
 import { normalizeDate, normalizeDateString } from '@/utils/dateUtils';
+import { useDisponibilidade } from '@/contexts/DisponibilidadeContext';
 
 export default function DataUnicaConfig({ datas = {}, onChange, ultimoHorario = [] }) {
+  const { availableSlots } = useDisponibilidade();
   const [modalConfig, setModalConfig] = useState({
     isOpen: false,
     dateKey: null,
     horarios: [],
     showReplicacao: false
   });
-  const [hoveredWeekday, setHoveredWeekday] = useState(null);
+
+  // Memoriza as datas disponíveis para evitar recálculos
+  const availableDates = useMemo(() => {
+    if (!availableSlots) return [];
+    return Object.keys(availableSlots).map(dateStr => normalizeDate(dateStr));
+  }, [availableSlots]);
+
+  // Memoriza a função de verificação de disponibilidade
+  const isDateDisabled = useMemo(() => {
+    return (date) => {
+      if (!date || !availableSlots) return true;
+      
+      // Normaliza a data para o formato YYYY-MM-DD
+      const dateStr = normalizeDateString(date);
+      
+      // Debug para sábados
+      if (date.getDay() === 6) { // 6 = Sábado
+        console.log('Debug Sábado:', {
+          data: date,
+          dateStr,
+          disponivel: !!availableSlots[dateStr],
+          slots: availableSlots[dateStr]?.slots,
+          todosSlots: availableSlots
+        });
+      }
+      
+      // Verifica se a data está nos slots disponíveis
+      return !availableSlots[dateStr];
+    };
+  }, [availableSlots]);
+
+  // Log inicial dos slots disponíveis
+  useEffect(() => {
+    console.log('Slots disponíveis carregados:', availableSlots);
+  }, [availableSlots]);
+
+  console.log('Datas disponíveis:', availableDates);
+
+  // Pega os horários disponíveis para uma data
+  const getHorariosDisponiveis = (dateStr) => {
+    return availableSlots?.[dateStr]?.slots || [];
+  };
 
   const verificarReplicacao = (dataAtual) => {
     const datasConfiguradas = Object.entries(datas || {})
@@ -25,7 +68,6 @@ export default function DataUnicaConfig({ datas = {}, onChange, ultimoHorario = 
 
   const handleListClick = (dateStr) => {
     const horarios = datas?.[dateStr] || [];
-    
     const showReplicacao = verificarReplicacao(dateStr);
 
     setModalConfig({
@@ -36,15 +78,26 @@ export default function DataUnicaConfig({ datas = {}, onChange, ultimoHorario = 
     });
   };
 
-  const handleDateClick = (dates) => {
-    if (!dates || !dates.length) return;
-    
-    const dateStr = normalizeDateString(dates[0]);
+  const handleCalendarSelect = (dates) => {
+    if (!dates) return;
+
+    const datesArray = Array.isArray(dates) ? dates : [dates];
+    if (datesArray.length === 0) return;
+
+    const lastDate = datesArray[datesArray.length - 1];
+    const dateStr = normalizeDateString(lastDate);
+
+    // Verifica se a data está disponível
+    if (!availableSlots?.[dateStr]) {
+      console.log('Data não disponível:', dateStr);
+      return;
+    }
+
     setModalConfig({
       isOpen: true,
       dateKey: dateStr,
       horarios: datas[dateStr] || ultimoHorario,
-      showReplicacao: false
+      showReplicacao: verificarReplicacao(dateStr)
     });
   };
 
@@ -53,12 +106,16 @@ export default function DataUnicaConfig({ datas = {}, onChange, ultimoHorario = 
       const { horarios: horariosNovos, replicar } = horarioData;
       const novasDatas = { ...datas };
 
-      if (!horariosNovos || horariosNovos.length === 0) {
-        // Se não tiver horários, remove a data
+      // Verifica se os horários selecionados estão disponíveis
+      const horariosDisponiveis = getHorariosDisponiveis(modalConfig.dateKey);
+      const horariosValidos = horariosNovos.filter(h => horariosDisponiveis.includes(h));
+
+      if (!horariosValidos.length) {
+        // Se não tiver horários válidos, remove a data
         delete novasDatas[modalConfig.dateKey];
       } else {
-        // Adiciona os novos horários
-        novasDatas[modalConfig.dateKey] = horariosNovos;
+        // Adiciona os horários válidos
+        novasDatas[modalConfig.dateKey] = horariosValidos;
       }
 
       onChange(novasDatas);
@@ -70,61 +127,9 @@ export default function DataUnicaConfig({ datas = {}, onChange, ultimoHorario = 
     setModalConfig({ isOpen: false, dateKey: null, horarios: [] });
   };
 
-  const handleCalendarSelect = (dates) => {
-    console.log('DataUnicaConfig handleCalendarSelect:', dates);
-    
-    // Se não houver data selecionada
-    if (!dates) return;
-
-    // Converte para array se for uma única data
-    const datesArray = Array.isArray(dates) ? dates : [dates];
-    
-    // Se o array estiver vazio, não faz nada
-    if (datesArray.length === 0) return;
-
-    // Pega a última data selecionada
-    const lastDate = datesArray[datesArray.length - 1];
-    const dateStr = normalizeDateString(lastDate);
-
-    setModalConfig({
-      isOpen: true,
-      dateKey: dateStr,
-      horarios: datas[dateStr] || ultimoHorario,
-      showReplicacao: verificarReplicacao(dateStr)
-    });
-  };
-
-  const handleDayMouseEnter = (date) => {
-    if (!isWeekly) return;
-    const dayOfWeek = date.getDay();
-    setHoveredWeekday(dayOfWeek);
-  };
-
-  const handleDayMouseLeave = () => {
-    if (!isWeekly) return;
-    setHoveredWeekday(null);
-  };
-
   const selectedDates = Object.keys(datas || {}).map(dateStr => 
     normalizeDate(dateStr)
   );
-
-  const formatHorario = (horario) => {
-    if (typeof horario === 'string') {
-      return horario;
-    }
-    return horario?.inicio && horario?.fim ? `${horario.inicio} às ${horario.fim}` : '';
-  };
-
-  const handleHorariosSave = (horarios) => {
-    const newDatas = {
-      ...datas,
-      [selectedDate]: horarios
-    };
-    console.log('DataUnicaConfig handleHorariosSave:', { selectedDate, horarios, newDatas });
-    onChange(newDatas);
-    setModalConfig({ isOpen: false, dateKey: null, horarios: [] });
-  };
 
   return (
     <div className="space-y-6">
@@ -134,12 +139,11 @@ export default function DataUnicaConfig({ datas = {}, onChange, ultimoHorario = 
           selected={selectedDates}
           onChange={handleCalendarSelect}
           minDate={normalizeDate(new Date())}
+          disabledDates={isDateDisabled}
           classNames={{
             day_selected: "bg-orange-500 text-white hover:bg-orange-600",
             day_today: "bg-gray-700 text-white",
           }}
-          onDayMouseEnter={handleDayMouseEnter}
-          onDayMouseLeave={handleDayMouseLeave}
         />
       </div>
 
@@ -155,7 +159,7 @@ export default function DataUnicaConfig({ datas = {}, onChange, ultimoHorario = 
                 {format(normalizeDate(data), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
               </div>
               <div className="text-sm text-gray-400">
-                {horarios.map(formatHorario).join(', ')}
+                {horarios.join(', ')}
               </div>
             </div>
             <button
@@ -180,6 +184,7 @@ export default function DataUnicaConfig({ datas = {}, onChange, ultimoHorario = 
           selectedHorarios={modalConfig.horarios}
           showReplicacao={modalConfig.showReplicacao}
           tipoConfiguracao="unica"
+          horariosDisponiveis={getHorariosDisponiveis(modalConfig.dateKey)}
         />
       )}
     </div>
