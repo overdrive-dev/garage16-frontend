@@ -38,7 +38,8 @@ export default function Calendar({
   defaultMonth = new Date(),
   weekView = false,
   onDayMouseEnter,
-  onDayMouseLeave
+  onDayMouseLeave,
+  hoveredWeekday
 }) {
   const [currentMonth, setCurrentMonth] = useState(defaultMonth);
   const firstDayCurrentMonth = startOfMonth(currentMonth);
@@ -52,59 +53,79 @@ export default function Calendar({
     setCurrentMonth(add(firstDayCurrentMonth, { months: -1 }));
   };
 
+<<<<<<< Updated upstream
   const nextMonth = () => {
     setCurrentMonth(add(firstDayCurrentMonth, { months: 1 }));
-  };
-
+=======
   const handleDateClick = (date) => {
     if (isDateDisabled(date)) return;
 
-    // Cria uma nova data usando os componentes da data original
+    // Normaliza a data para o fuso horário local
     const normalizedDate = new Date(
       date.getFullYear(),
       date.getMonth(),
       date.getDate()
     );
 
-    if (mode === 'single') {
-      onChange(normalizedDate);
-    } else if (mode === 'multiple') {
-      const currentSelected = selected || [];
-      
-      if (weekView) {
-        onChange([normalizedDate]);
-      } else {
+    if (weekView) {
+      if (!isDateDisabled(normalizedDate)) {
         onChange([normalizedDate]);
       }
-    } else if (mode === 'range') {
-      if (!selected?.from || (selected.from && selected.to)) {
-        onChange({ from: normalizedDate, to: null });
-      } else {
-        const { from } = selected;
-        // Normaliza a data inicial também
-        const normalizedFrom = new Date(
-          from.getFullYear(),
-          from.getMonth(),
-          from.getDate()
-        );
-        
-        if (isBefore(normalizedDate, normalizedFrom)) {
-          onChange({ from: normalizedDate, to: normalizedFrom });
-        } else {
-          onChange({ from: normalizedFrom, to: normalizedDate });
-        }
-      }
+      return;
     }
+
+    switch (mode) {
+      case 'range': {
+        if (!selected?.from || (selected.from && selected.to)) {
+          onChange({ from: normalizedDate, to: null });
+        } else {
+          const { from } = selected;
+          // Normaliza a data inicial também
+          const normalizedFrom = new Date(
+            from.getFullYear(),
+            from.getMonth(),
+            from.getDate()
+          );
+          
+          if (isBefore(normalizedDate, normalizedFrom)) {
+            onChange({ from: normalizedDate, to: normalizedFrom });
+          } else {
+            onChange({ from: normalizedFrom, to: normalizedDate });
+          }
+        }
+        break;
+      }
+      case 'multiple': {
+        if (!isDateDisabled(normalizedDate)) {
+          const currentSelected = Array.isArray(selected) ? selected : [];
+          const dateExists = currentSelected.some(d => isSameDay(d, normalizedDate));
+          onChange([normalizedDate]);
+        }
+        break;
+      }
+      case 'single':
+      default:
+        if (!isDateDisabled(normalizedDate)) {
+          onChange(normalizedDate);
+        }
+        break;
+    }
+>>>>>>> Stashed changes
   };
 
   const isDateSelected = (date) => {
     if (!selected) return false;
     
+<<<<<<< Updated upstream
     const normalizedDate = new Date(date);
     
     if (mode === 'single') {
       return isSameDay(normalizedDate, selected);
     }
+=======
+    const normalizedDate = normalizeDate(date);
+    const today = startOfToday();
+>>>>>>> Stashed changes
     
     if (mode === 'multiple') {
       if (weekView) {
@@ -127,9 +148,52 @@ export default function Calendar({
       });
     }
 
+<<<<<<< Updated upstream
     if (mode === 'range' && selected.from) {
       const normalizedFrom = new Date(selected.from);
       return isSameDay(normalizedDate, normalizedFrom);
+=======
+    switch (mode) {
+      case 'range': {
+        if (!selected.from) return false;
+        
+        const normalizedStart = normalizeDate(selected.from);
+        const normalizedEnd = selected.to ? normalizeDate(selected.to) : null;
+        
+        if (!normalizedDate || !normalizedStart) return false;
+        if (!normalizedEnd) return isSameDay(normalizedDate, normalizedStart);
+        
+        // Se a data está desabilitada, não mostra como selecionada
+        if (isDateDisabled(date)) return false;
+        
+        return isWithinInterval(normalizedDate, { 
+          start: normalizedStart, 
+          end: normalizedEnd 
+        });
+      }
+
+      case 'single':
+      case 'multiple':
+      default:
+        return Array.isArray(selected) 
+          ? selected.some(d => isSameDay(normalizeDate(d), normalizedDate))
+          : isSameDay(normalizedDate, normalizeDate(selected));
+    }
+  };
+
+  const isDateDisabled = (date) => {
+    const normalizedDate = normalizeDate(date);
+    
+    // Verifica data mínima
+    if (minDate && isBefore(normalizedDate, normalizeDate(minDate))) return true;
+    
+    // Verifica data máxima
+    if (maxDate && isAfter(normalizedDate, normalizeDate(maxDate))) return true;
+    
+    // Verifica função de desabilitação personalizada
+    if (typeof disabledDates === 'function') {
+      return disabledDates(normalizedDate);
+>>>>>>> Stashed changes
     }
     
     return false;
@@ -147,6 +211,10 @@ export default function Calendar({
     }
 
     // Verifica datas desabilitadas específicas
+    if (typeof disabledDates === 'function') {
+      return disabledDates(date);
+    }
+
     return disabledDates.some(disabledDate => isSameDay(date, disabledDate));
   };
 
@@ -193,7 +261,7 @@ export default function Calendar({
           const isRangeEnd = mode === 'range' && selected?.to && isSameDay(day, selected.to);
           const isInRange = mode === 'range' && selected?.from && selected?.to && 
             isWithinInterval(day, { start: selected.from, end: selected.to });
-          const matchesHovered = customClassNames.day_matches_hovered ? customClassNames.day_matches_hovered(day) : false;
+          const matchesHovered = weekView && hoveredWeekday !== null && getDay(day) === hoveredWeekday && isAfter(day, new Date());
           
           return (
             <div
@@ -213,8 +281,8 @@ export default function Calendar({
                 }
               }}
               onMouseEnter={() => {
-                if (!isDisabled) {
-                  onDayMouseEnter?.(day);
+                if (!isDisabled && onDayMouseEnter) {
+                  onDayMouseEnter(day);
                 }
               }}
               onMouseLeave={onDayMouseLeave}
@@ -223,11 +291,13 @@ export default function Calendar({
                 dateTime={format(day, 'yyyy-MM-dd')}
                 className={classNames(
                   'mx-auto flex h-7 w-7 items-center justify-center rounded-full transition-colors',
-                  isRangeStart && 'bg-orange-500 text-white font-semibold',
-                  isRangeEnd && 'bg-orange-500 text-white font-semibold',
-                  !isRangeStart && !isRangeEnd && isInRange && 'bg-orange-500/20 text-gray-200',
+                  isSelected && !isRangeStart && !isRangeEnd && customClassNames.day_selected,
+                  isRangeStart && customClassNames.day_range_start,
+                  isRangeEnd && customClassNames.day_range_end,
+                  !isRangeStart && !isRangeEnd && isInRange && customClassNames.day_range_middle,
                   !isSelected && !isToday(day) && isCurrentMonth && 'text-gray-200',
-                  !isSelected && !isToday(day) && !isCurrentMonth && 'text-gray-400'
+                  !isSelected && !isToday(day) && !isCurrentMonth && 'text-gray-400',
+                  isToday(day) && customClassNames.day_today
                 )}
               >
                 {format(day, 'd')}

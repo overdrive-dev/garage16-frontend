@@ -34,6 +34,7 @@ export default function HorarioModal({
     '14:00', '15:00', '16:00', '17:00'
   ];
 
+<<<<<<< Updated upstream
   const diasSemana = [
     { nome: 'Domingo', formato: 'domingo' },
     { nome: 'Segunda', formato: 'segunda' },
@@ -43,6 +44,30 @@ export default function HorarioModal({
     { nome: 'Sexta', formato: 'sexta' },
     { nome: 'Sábado', formato: 'sábado' }
   ];
+=======
+  // Verifica se um horário está disponível para a data atual
+  const isHorarioDisponivel = (horario) => {
+    // Usa diretamente os horários disponíveis passados como prop
+    const disponivel = horariosDisponiveis.includes(horario);
+    console.log('[HorarioModal] Verificando disponibilidade:', {
+      horario,
+      disponivel,
+      horariosDisponiveis
+    });
+    return disponivel;
+  };
+
+  // Pega os horários disponíveis para a data atual
+  const getHorariosDisponiveis = () => {
+    console.log('[HorarioModal] Obtendo horários disponíveis:', {
+      data: data?.toLocaleDateString('pt-BR'),
+      horariosDisponiveis,
+      totalHorarios: horariosDisponiveis.length
+    });
+    // Usa diretamente os horários disponíveis passados como prop
+    return horariosDisponiveis;
+  };
+>>>>>>> Stashed changes
 
   const toggleHorario = (horario) => {
     const horarios = Array.isArray(tempHorarios) ? tempHorarios : tempHorarios?.horarios || [];

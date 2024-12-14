@@ -12,7 +12,57 @@ export default function DataUnicaConfig({ datas = {}, onChange, isWeekly = false
     horarios: []
   });
 
+<<<<<<< Updated upstream
   const [hoveredWeekday, setHoveredWeekday] = useState(null);
+=======
+  // Memoriza as datas disponíveis para evitar recálculos
+  const availableDates = useMemo(() => {
+    if (!availableSlots?.slots) return [];
+    return Object.keys(availableSlots.slots).map(dateStr => normalizeDate(dateStr));
+  }, [availableSlots]);
+
+  // Memoriza a função de verificação de disponibilidade
+  const isDateDisabled = useMemo(() => {
+    return (date) => {
+      if (!date) return true;
+      
+      // Verifica se a data tem slots disponíveis na loja
+      const diaSemana = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sab'][date.getDay()];
+      const slotsLoja = storeSettings?.weekDays?.[diaSemana]?.slots || [];
+      
+      // Verifica se a data tem slots específicos
+      const dateStr = normalizeDateString(date);
+      const slotsData = availableSlots?.slots?.[dateStr] || [];
+      
+      // A data está habilitada se tiver slots da loja OU slots específicos
+      const isDisabled = slotsLoja.length === 0 && slotsData.length === 0;
+      
+      console.log('[DataUnicaConfig] Verificando se data está desabilitada:', {
+        date: date.toLocaleDateString('pt-BR'),
+        diaSemana,
+        slotsLoja,
+        slotsData,
+        isDisabled
+      });
+      
+      return isDisabled;
+    };
+  }, [availableSlots, storeSettings]);
+
+  // Pega os horários disponíveis para uma data
+  const getHorariosDisponiveis = (dateStr) => {
+    if (!dateStr) return [];
+    const date = normalizeDate(dateStr);
+    const diaSemana = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sab'][date.getDay()];
+    
+    // Pega os slots disponíveis da loja e da data específica
+    const slotsLoja = storeSettings?.weekDays?.[diaSemana]?.slots || [];
+    const slotsData = availableSlots?.slots?.[dateStr] || [];
+    
+    // Combina os slots e remove duplicatas
+    return Array.from(new Set([...slotsLoja, ...slotsData])).sort();
+  };
+>>>>>>> Stashed changes
 
   // Função isolada para verificar se deve mostrar replicação
   const verificarReplicacao = (dataAtual) => {
@@ -83,6 +133,7 @@ export default function DataUnicaConfig({ datas = {}, onChange, isWeekly = false
   const handleHorarioConfirm = (horarioData) => {
     if (modalConfig.dateKey) {
       const { horarios: horariosNovos, replicar } = horarioData;
+<<<<<<< Updated upstream
       
       // Se não houver horários, remove a data
       if (!horariosNovos || horariosNovos.length === 0) {
@@ -92,13 +143,48 @@ export default function DataUnicaConfig({ datas = {}, onChange, isWeekly = false
         onChange(novasDatas);
         setModalConfig({ isOpen: false, dateKey: null, horarios: [] });
         return;
+=======
+      const novasHorarios = { ...horariosConfig };
+
+      // Verifica se os horários selecionados estão disponíveis
+      const horariosDisponiveis = getHorariosDisponiveis(modalConfig.dateKey);
+      console.log('[DataUnicaConfig] Verificando horários disponíveis:', {
+        dateKey: modalConfig.dateKey,
+        horariosDisponiveis,
+        horariosNovos
+      });
+      
+      const horariosValidos = horariosNovos.filter(h => horariosDisponiveis.includes(h));
+
+      // Se não tiver horários válidos, remove a data
+      if (!horariosValidos.length) {
+        console.log('[DataUnicaConfig] Removendo data por não ter horários válidos:', modalConfig.dateKey);
+        delete novasHorarios[modalConfig.dateKey];
+      } else {
+        // Adiciona os horários válidos
+        novasHorarios[modalConfig.dateKey] = horariosValidos.sort();
+>>>>>>> Stashed changes
       }
 
       // Cria um novo objeto para armazenar todas as datas
       const novasDatas = { ...datas };
 
+<<<<<<< Updated upstream
       // Adiciona os horários à data atual
       novasDatas[modalConfig.dateKey] = horariosNovos;
+=======
+        // Para cada data configurada
+        datasConfiguradas.forEach(dataObj => {
+          const dateStr = normalizeDateString(dataObj);
+          const horariosDisponiveisData = getHorariosDisponiveis(dateStr);
+          console.log('[DataUnicaConfig] Verificando horários para replicação:', {
+            dateStr,
+            horariosDisponiveisData,
+            horariosNovos
+          });
+          
+          const horariosValidosData = horariosNovos.filter(h => horariosDisponiveisData.includes(h));
+>>>>>>> Stashed changes
 
       // Se houver replicação, aplica de acordo com o tipo de configuração
       if (replicar?.tipo === 'todos') {
@@ -246,6 +332,7 @@ export default function DataUnicaConfig({ datas = {}, onChange, isWeekly = false
         ))}
       </div>
 
+<<<<<<< Updated upstream
       <HorarioModal
         isOpen={modalConfig.isOpen}
         onClose={handleModalClose}
@@ -255,6 +342,29 @@ export default function DataUnicaConfig({ datas = {}, onChange, isWeekly = false
         showReplicacao={modalConfig.showReplicacao}
         tipoConfiguracao="unica"
       />
+=======
+      {/* Modal de Horários */}
+      {modalConfig.isOpen && (
+        <>
+          {console.log('[DataUnicaConfig] Renderizando modal:', {
+            dateKey: modalConfig.dateKey,
+            horarios: modalConfig.horarios,
+            horariosDisponiveis: modalConfig.horariosDisponiveis,
+            showReplicacao: modalConfig.showReplicacao
+          })}
+          <HorarioModal
+            isOpen={modalConfig.isOpen}
+            onClose={handleModalClose}
+            onConfirm={handleHorarioConfirm}
+            selectedHorarios={modalConfig.horarios}
+            data={modalConfig.dateKey ? normalizeDate(modalConfig.dateKey) : null}
+            showReplicacao={modalConfig.showReplicacao}
+            tipoConfiguracao="dataUnica"
+            horariosDisponiveis={modalConfig.horariosDisponiveis}
+          />
+        </>
+      )}
+>>>>>>> Stashed changes
     </div>
   );
 } 
