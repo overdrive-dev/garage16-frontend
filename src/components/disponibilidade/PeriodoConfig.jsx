@@ -2,7 +2,16 @@ import { format, eachDayOfInterval } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import Calendar, { CalendarSkeleton } from '@/components/Calendar';
 import HorarioModal from './HorarioModal';
-import { normalizeDate, normalizeDateString, isValidDate } from '@/utils/dateUtils';
+import { 
+  normalizeDate, 
+  normalizeDateString, 
+  isValidDate, 
+  getDayOfWeek, 
+  getDayString,
+  toFirebaseDate,
+  fromFirebaseDate,
+  formatDateDisplay
+} from '@/utils/dateUtils';
 import { useState, useEffect } from 'react';
 import { useDisponibilidade } from '@/contexts/DisponibilidadeContext';
 import { PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
@@ -22,7 +31,8 @@ export default function PeriodoConfig({ datas = {}, onChange, ultimoHorario = []
   useEffect(() => {
     if (Object.keys(datas).length > 0) {
       const datasOrdenadas = Object.keys(datas)
-        .map(data => new Date(data))
+        .map(data => fromFirebaseDate(data))
+        .filter(date => date !== null)
         .sort((a, b) => a - b);
 
       if (datasOrdenadas.length > 0) {
@@ -32,15 +42,16 @@ export default function PeriodoConfig({ datas = {}, onChange, ultimoHorario = []
         });
       }
     }
-  }, [datas, storeSettings]);
+  }, [datas]);
 
   const isDiaDisponivelNaLoja = (date) => {
     if (!date || !isValidDate(date)) return false;
     
-    const diaSemana = ['seg', 'ter', 'qua', 'qui', 'sex', 'sab', 'dom'][date.getDay() === 0 ? 6 : date.getDay() - 1];
-    const diaConfig = storeSettings?.weekDays?.[diaSemana];
+    const dayIndex = getDayOfWeek(date);
+    if (dayIndex === null) return false;
     
-    if (!diaConfig) return false;
+    const diaSemana = getDayString(dayIndex);
+    const diaConfig = storeSettings?.weekDays?.[diaSemana];
     
     return diaConfig?.active !== false && Array.isArray(diaConfig?.slots) && diaConfig?.slots?.length > 0;
   };
@@ -57,6 +68,7 @@ export default function PeriodoConfig({ datas = {}, onChange, ultimoHorario = []
       const datas = eachDayOfInterval({ start: from, end: to });
       return datas.filter(date => isDiaDisponivelNaLoja(date));
     } catch (error) {
+      console.error('Erro ao obter datas do período:', error);
       return [];
     }
   };
@@ -71,8 +83,8 @@ export default function PeriodoConfig({ datas = {}, onChange, ultimoHorario = []
       const normalizedFrom = normalizeDate(range.from);
       console.log('🔍 Seleção de data:', {
         tipo: 'inicial',
-        original: range.from.toLocaleDateString(),
-        normalizada: normalizedFrom.toLocaleDateString()
+        original: formatDateDisplay(range.from),
+        normalizada: formatDateDisplay(normalizedFrom)
       });
       setSelectedPeriod({ from: normalizedFrom, to: null });
       return;
@@ -87,12 +99,12 @@ export default function PeriodoConfig({ datas = {}, onChange, ultimoHorario = []
       console.log('🔍 Seleção de data:', {
         tipo: 'range',
         original: {
-          from: range.from.toLocaleDateString(),
-          to: range.to.toLocaleDateString()
+          from: formatDateDisplay(range.from),
+          to: formatDateDisplay(range.to)
         },
         normalizada: {
-          from: normalizedRange.from.toLocaleDateString(),
-          to: normalizedRange.to.toLocaleDateString()
+          from: formatDateDisplay(normalizedRange.from),
+          to: formatDateDisplay(normalizedRange.to)
         }
       });
       
@@ -102,13 +114,14 @@ export default function PeriodoConfig({ datas = {}, onChange, ultimoHorario = []
       
       if (datasDisponiveis.length === 0) return;
 
-      datasDisponiveis.sort((a, b) => a.getTime() - b.getTime());
+      datasDisponiveis.sort((a, b) => a - b);
       const primeiraDataDisponivel = datasDisponiveis[0];
-      const dateStr = normalizeDateString(primeiraDataDisponivel);
+      const dateStr = toFirebaseDate(primeiraDataDisponivel);
 
       const todosHorarios = new Set();
       datasDisponiveis.forEach(date => {
-        const diaSemana = ['seg', 'ter', 'qua', 'qui', 'sex', 'sab', 'dom'][date.getDay() === 0 ? 6 : date.getDay() - 1];
+        const dayIndex = getDayOfWeek(date);
+        const diaSemana = getDayString(dayIndex);
         const horariosDesteDia = storeSettings?.weekDays?.[diaSemana]?.slots || [];
         horariosDesteDia.forEach(horario => todosHorarios.add(horario));
       });
@@ -124,12 +137,12 @@ export default function PeriodoConfig({ datas = {}, onChange, ultimoHorario = []
         Object.entries(datas).forEach(([data, horarios]) => {
           if (!data || !horarios) return;
           try {
-            const dataObj = normalizeDate(new Date(data));
-            if (dataObj >= normalizedRange.from && dataObj <= normalizedRange.to && isDiaDisponivelNaLoja(dataObj)) {
+            const dataObj = fromFirebaseDate(data);
+            if (dataObj && dataObj >= normalizedRange.from && dataObj <= normalizedRange.to && isDiaDisponivelNaLoja(dataObj)) {
               novosDatas[data] = horarios;
             }
           } catch (error) {
-            // Ignora erros de processamento de data
+            console.error('Erro ao processar data:', error);
           }
         });
       }
@@ -168,8 +181,11 @@ export default function PeriodoConfig({ datas = {}, onChange, ultimoHorario = []
     }
 
     if (modalConfig.dateKey && !modalConfig.isNewRange) {
-      const dataObj = new Date(modalConfig.dateKey);
-      const diaSemana = ['seg', 'ter', 'qua', 'qui', 'sex', 'sab', 'dom'][dataObj.getDay() === 0 ? 6 : dataObj.getDay() - 1];
+      const dataObj = fromFirebaseDate(modalConfig.dateKey);
+      if (!dataObj) return;
+
+      const dayIndex = getDayOfWeek(dataObj);
+      const diaSemana = getDayString(dayIndex);
       const horariosDisponiveis = storeSettings?.weekDays?.[diaSemana]?.slots || [];
       
       const horariosValidos = horariosArray.filter(h => horariosDisponiveis.includes(h));
@@ -186,9 +202,11 @@ export default function PeriodoConfig({ datas = {}, onChange, ultimoHorario = []
           datasDisponiveis.forEach(date => {
             const diaSemanaData = format(date, 'EEEE', { locale: ptBR }).toLowerCase();
             if (horarioData.diasSemana.includes(diaSemanaData)) {
-              const dateStr = normalizeDateString(date);
-              if (dateStr !== modalConfig.dateKey) {
-                const horariosDispData = storeSettings?.weekDays?.[['seg', 'ter', 'qua', 'qui', 'sex', 'sab', 'dom'][date.getDay() === 0 ? 6 : date.getDay() - 1]]?.slots || [];
+              const dateStr = toFirebaseDate(date);
+              if (dateStr && dateStr !== modalConfig.dateKey) {
+                const dayIdx = getDayOfWeek(date);
+                const diaSem = getDayString(dayIdx);
+                const horariosDispData = storeSettings?.weekDays?.[diaSem]?.slots || [];
                 const horariosValidosData = horariosArray.filter(h => horariosDispData.includes(h));
                 if (horariosValidosData.length > 0) {
                   novasDatas[dateStr] = [...horariosValidosData];
@@ -199,10 +217,11 @@ export default function PeriodoConfig({ datas = {}, onChange, ultimoHorario = []
         } else {
           const datasDisponiveis = getDatasPeriodo(modalConfig.periodo.from, modalConfig.periodo.to);
           datasDisponiveis.forEach(date => {
-            const dateStr = normalizeDateString(date);
-            if (dateStr !== modalConfig.dateKey) {
-              const diaSemanaData = ['seg', 'ter', 'qua', 'qui', 'sex', 'sab', 'dom'][date.getDay() === 0 ? 6 : date.getDay() - 1];
-              const horariosDispData = storeSettings?.weekDays?.[diaSemanaData]?.slots || [];
+            const dateStr = toFirebaseDate(date);
+            if (dateStr && dateStr !== modalConfig.dateKey) {
+              const dayIdx = getDayOfWeek(date);
+              const diaSem = getDayString(dayIdx);
+              const horariosDispData = storeSettings?.weekDays?.[diaSem]?.slots || [];
               const horariosValidosData = horariosArray.filter(h => horariosDispData.includes(h));
               if (horariosValidosData.length > 0) {
                 novasDatas[dateStr] = [...horariosValidosData];
@@ -214,9 +233,12 @@ export default function PeriodoConfig({ datas = {}, onChange, ultimoHorario = []
     } else if (modalConfig.isNewRange && modalConfig.periodo) {
       const datasDisponiveis = getDatasPeriodo(modalConfig.periodo.from, modalConfig.periodo.to);
       datasDisponiveis.forEach(date => {
-        const dateStr = normalizeDateString(date);
-        const diaSemana = ['seg', 'ter', 'qua', 'qui', 'sex', 'sab', 'dom'][date.getDay() === 0 ? 6 : date.getDay() - 1];
-        const horariosDisponiveis = storeSettings?.weekDays?.[diaSemana]?.slots || [];
+        const dateStr = toFirebaseDate(date);
+        if (!dateStr) return;
+
+        const dayIdx = getDayOfWeek(date);
+        const diaSem = getDayString(dayIdx);
+        const horariosDisponiveis = storeSettings?.weekDays?.[diaSem]?.slots || [];
         const horariosValidos = horariosArray.filter(h => horariosDisponiveis.includes(h));
         if (horariosValidos.length > 0) {
           novasDatas[dateStr] = [...horariosValidos];
@@ -237,9 +259,12 @@ export default function PeriodoConfig({ datas = {}, onChange, ultimoHorario = []
   };
 
   const handleItemClick = (data) => {
-    const dateStr = normalizeDateString(data);
-    const diaSemana = ['seg', 'ter', 'qua', 'qui', 'sex', 'sab', 'dom'][data.getDay() === 0 ? 6 : data.getDay() - 1];
-    const horariosDisponiveis = storeSettings?.weekDays?.[diaSemana]?.slots || [];
+    const dateStr = toFirebaseDate(data);
+    if (!dateStr) return;
+
+    const dayIdx = getDayOfWeek(data);
+    const diaSem = getDayString(dayIdx);
+    const horariosDisponiveis = storeSettings?.weekDays?.[diaSem]?.slots || [];
 
     setModalConfig({
       isOpen: true,
@@ -249,7 +274,7 @@ export default function PeriodoConfig({ datas = {}, onChange, ultimoHorario = []
       periodo: { from: data, to: data },
       isNewRange: false,
       horariosDisponiveis: horariosDisponiveis,
-      diaSemana: diaSemana
+      diaSemana: diaSem
     });
   };
 
@@ -267,15 +292,19 @@ export default function PeriodoConfig({ datas = {}, onChange, ultimoHorario = []
   const getDatasOrdenadas = () => {
     try {
       const datasArray = Object.entries(datas)
-        .map(([data, horarios]) => ({
-          data: normalizeDate(new Date(data)),
-          horarios: Array.isArray(horarios) ? horarios.sort() : []
-        }))
-        .filter(({ data }) => isValidDate(data))
-        .sort((a, b) => a.data.getTime() - b.data.getTime());
+        .map(([data, horarios]) => {
+          const dataObj = fromFirebaseDate(data);
+          return dataObj ? {
+            data: dataObj,
+            horarios: Array.isArray(horarios) ? horarios.sort() : []
+          } : null;
+        })
+        .filter(item => item !== null)
+        .sort((a, b) => a.data - b.data);
 
       return datasArray;
     } catch (error) {
+      console.error('Erro ao ordenar datas:', error);
       return [];
     }
   };
@@ -340,7 +369,7 @@ export default function PeriodoConfig({ datas = {}, onChange, ultimoHorario = []
         <div className="space-y-2">
           {getDatasOrdenadas().map(({ data, horarios }) => (
             <div
-              key={normalizeDateString(data)}
+              key={toFirebaseDate(data)}
               onClick={() => handleItemClick(data)}
               className="bg-gray-800 rounded-lg p-4 transition-all duration-200 hover:bg-gray-700/50 cursor-pointer"
             >
@@ -362,8 +391,11 @@ export default function PeriodoConfig({ datas = {}, onChange, ultimoHorario = []
                   onClick={(e) => {
                     e.stopPropagation();
                     const novasDatas = { ...datas };
-                    delete novasDatas[normalizeDateString(data)];
-                    onChange(novasDatas);
+                    const dateStr = toFirebaseDate(data);
+                    if (dateStr) {
+                      delete novasDatas[dateStr];
+                      onChange(novasDatas);
+                    }
                   }}
                   className="p-2 text-gray-400 hover:text-red-400 transition-colors"
                 >
@@ -380,13 +412,13 @@ export default function PeriodoConfig({ datas = {}, onChange, ultimoHorario = []
         onClose={handleModalClose}
         onConfirm={handleHorarioConfirm}
         selectedHorarios={modalConfig.horarios}
-        data={modalConfig.dateKey ? normalizeDate(modalConfig.dateKey) : null}
+        data={modalConfig.dateKey ? fromFirebaseDate(modalConfig.dateKey) : null}
         showReplicacao={modalConfig.showReplicacao}
         tipoConfiguracao="periodo"
         isNewRange={modalConfig.isNewRange}
         periodo={modalConfig.periodo}
         horariosDisponiveis={modalConfig.horariosDisponiveis}
-        diaSemana={modalConfig.dateKey ? ['seg', 'ter', 'qua', 'qui', 'sex', 'sab', 'dom'][normalizeDate(modalConfig.dateKey).getDay() === 0 ? 6 : normalizeDate(modalConfig.dateKey).getDay() - 1] : null}
+        diaSemana={modalConfig.diaSemana}
       />
     </div>
   );

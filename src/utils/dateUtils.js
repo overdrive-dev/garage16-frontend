@@ -1,74 +1,114 @@
-import { startOfDay, format, parseISO } from 'date-fns';
+import { startOfDay, format, parseISO, isValid } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
-// Normaliza uma data para o início do dia no fuso horário local
+// Constantes
+export const DIAS_SEMANA = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sab'];
+
+// Converte uma data para o formato do Firebase (YYYY-MM-DD)
+export const toFirebaseDate = (date) => {
+  if (!date) return null;
+  
+  try {
+    // Se já está no formato correto, retorna
+    if (typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      return date;
+    }
+
+    // Converte para Date e normaliza
+    const dateObj = startOfDay(typeof date === 'string' ? parseISO(date) : date);
+    if (!isValid(dateObj)) return null;
+
+    return format(dateObj, 'yyyy-MM-dd');
+  } catch (error) {
+    console.error('Erro ao converter para formato Firebase:', error);
+    return null;
+  }
+};
+
+// Converte uma data do Firebase para objeto Date
+export const fromFirebaseDate = (dateStr) => {
+  if (!dateStr) return null;
+  
+  try {
+    // Valida o formato
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return null;
+
+    const date = startOfDay(parseISO(dateStr));
+    if (!isValid(date)) return null;
+
+    return date;
+  } catch (error) {
+    console.error('Erro ao converter do formato Firebase:', error);
+    return null;
+  }
+};
+
+// Normaliza uma data para o início do dia
 export const normalizeDate = (date) => {
   if (!date) return null;
   
-  let normalizedDate;
-
-  // Se já é uma data, clona para não modificar a original
-  if (date instanceof Date) {
-    normalizedDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-  } else {
-    // Se é string, primeiro tenta parsear como YYYY-MM-DD
-    if (typeof date === 'string' && date.match(/^\d{4}-\d{2}-\d{2}$/)) {
-      const [year, month, day] = date.split('-').map(Number);
-      normalizedDate = new Date(year, month - 1, day);
-    } else {
-      // Se não for no formato YYYY-MM-DD, usa o construtor padrão
-      const tempDate = new Date(date);
-      normalizedDate = new Date(
-        tempDate.getFullYear(),
-        tempDate.getMonth(),
-        tempDate.getDate()
-      );
-    }
+  try {
+    const dateObj = startOfDay(typeof date === 'string' ? parseISO(date) : date);
+    if (!isValid(dateObj)) return null;
+    return dateObj;
+  } catch (error) {
+    console.error('Erro ao normalizar data:', error);
+    return null;
   }
-
-  // Garante que a data está no início do dia no fuso horário local
-  normalizedDate.setHours(0, 0, 0, 0);
-  return normalizedDate;
 };
 
 // Converte uma data para string no formato YYYY-MM-DD
 export const normalizeDateString = (date) => {
-  if (!date) return null;
-  
-  // Normaliza a data para meia-noite no fuso horário local
-  const normalizedDate = normalizeDate(date);
-  if (!normalizedDate) return null;
-
-  // Formata como YYYY-MM-DD usando os componentes locais da data
-  const year = normalizedDate.getFullYear();
-  const month = String(normalizedDate.getMonth() + 1).padStart(2, '0');
-  const day = String(normalizedDate.getDate()).padStart(2, '0');
-  
-  return `${year}-${month}-${day}`;
+  return toFirebaseDate(date);
 };
 
 // Verifica se uma data é válida
 export const isValidDate = (date) => {
   if (!date) return false;
-  const d = new Date(date);
-  return d instanceof Date && !isNaN(d);
+  
+  try {
+    const dateObj = typeof date === 'string' ? parseISO(date) : date;
+    return isValid(dateObj);
+  } catch {
+    return false;
+  }
 };
 
-// Obtém o dia da semana no formato correto (0 = domingo, 6 = sábado)
+// Obtém o dia da semana (0 = domingo, 6 = sábado)
 export const getDayOfWeek = (date) => {
   if (!date) return null;
-  const normalizedDate = normalizeDate(date);
-  if (!normalizedDate) return null;
-  return normalizedDate.getDay();
+  
+  try {
+    const dateObj = normalizeDate(date);
+    if (!dateObj) return null;
+    return dateObj.getDay();
+  } catch (error) {
+    console.error('Erro ao obter dia da semana:', error);
+    return null;
+  }
 };
 
-// Converte o índice do dia da semana para a string correta
+// Converte o índice do dia para a string correta
 export const getDayString = (dayIndex) => {
-  const days = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sab'];
-  return days[dayIndex];
+  if (dayIndex === null || dayIndex === undefined || dayIndex < 0 || dayIndex > 6) return null;
+  return DIAS_SEMANA[dayIndex];
 };
 
 // Converte uma string de dia para o índice correto
 export const getDayIndex = (dayString) => {
-  const days = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sab'];
-  return days.indexOf(dayString);
+  return DIAS_SEMANA.indexOf(dayString);
+};
+
+// Formata uma data para exibição
+export const formatDateDisplay = (date, formatStr = "dd/MM/yyyy") => {
+  if (!date) return '';
+  
+  try {
+    const dateObj = normalizeDate(date);
+    if (!dateObj) return '';
+    return format(dateObj, formatStr, { locale: ptBR });
+  } catch (error) {
+    console.error('Erro ao formatar data:', error);
+    return '';
+  }
 }; 
