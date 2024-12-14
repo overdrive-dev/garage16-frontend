@@ -3,7 +3,7 @@ import HorarioModal from './HorarioModal';
 import Calendar from '../Calendar';
 import { format, isAfter, startOfDay, eachDayOfInterval, endOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { TrashIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
+import { TrashIcon, ExclamationTriangleIcon, PencilIcon, PlusIcon } from '@heroicons/react/24/outline';
 import { useDisponibilidade } from '@/contexts/DisponibilidadeContext';
 import { normalizeDate, normalizeDateString } from '@/utils/dateUtils';
 
@@ -19,27 +19,6 @@ const diasDaSemana = [
 
 export default function SemanalConfig({ horarios, onChange, datasDisponiveis = [] }) {
   const { storeSettings } = useDisponibilidade();
-  
-  // Log das configurações da loja
-  useEffect(() => {
-    console.log('Configurações da loja:', {
-      storeSettings,
-      weekDays: storeSettings?.weekDays,
-      horarios,
-      datasDisponiveis
-    });
-
-    // Verifica cada dia da semana
-    diasDaSemana.forEach(({ key, label }) => {
-      console.log(`Verificando configuração do ${label}:`, {
-        key,
-        config: storeSettings?.weekDays?.[key],
-        active: storeSettings?.weekDays?.[key]?.active,
-        slots: storeSettings?.weekDays?.[key]?.slots
-      });
-    });
-  }, [storeSettings, horarios, datasDisponiveis]);
-
   const [modalConfig, setModalConfig] = useState({
     isOpen: false,
     diaSemana: null,
@@ -52,13 +31,6 @@ export default function SemanalConfig({ horarios, onChange, datasDisponiveis = [
   // Verifica se um dia está disponível nas configurações da loja
   const isDiaDisponivelNaLoja = (diaSemana) => {
     const diaConfig = storeSettings?.weekDays?.[diaSemana];
-    console.log('Verificando disponibilidade do dia:', {
-      diaSemana,
-      config: diaConfig,
-      active: diaConfig?.active,
-      slots: diaConfig?.slots,
-      resultado: diaConfig?.active !== false && diaConfig?.slots?.length > 0
-    });
     return diaConfig?.active !== false && diaConfig?.slots?.length > 0;
   };
 
@@ -104,9 +76,6 @@ export default function SemanalConfig({ horarios, onChange, datasDisponiveis = [
   const diasAtivos = useMemo(() => getDiasAtivos(), [horarios, datasDisponiveis, storeSettings]);
 
   const handleCalendarSelect = (dates) => {
-    console.log('\n=== handleCalendarSelect ===');
-    console.log('Datas selecionadas:', dates?.map(d => normalizeDateString(d)));
-    
     if (!dates || !dates.length) return;
     
     const date = dates[0];
@@ -119,12 +88,8 @@ export default function SemanalConfig({ horarios, onChange, datasDisponiveis = [
     }
 
     if (!isDataDisponivel(date)) {
-      console.log('Data não disponível:', normalizeDateString(date));
       return;
     }
-
-    console.log('Dia da semana selecionado:', diaSemana);
-    console.log('===================\n');
 
     handleOpenModal(diaSemana);
   };
@@ -165,10 +130,6 @@ export default function SemanalConfig({ horarios, onChange, datasDisponiveis = [
     setError(null);
     setIsLoading(true);
     try {
-      console.log('\n=== handleHorarioConfirm ===');
-      console.log('Dados recebidos:', horarioData);
-      console.log('Estado atual:', modalConfig);
-      
       if (modalConfig.diaSemana) {
         // Verifica se o dia está disponível na loja
         if (!isDiaDisponivelNaLoja(modalConfig.diaSemana)) {
@@ -194,13 +155,11 @@ export default function SemanalConfig({ horarios, onChange, datasDisponiveis = [
               ativo: true,
               horarios: horariosPermitidos
             };
-            console.log(`Adicionando horários ao dia ${dia}:`, horariosPermitidos);
           }
         };
 
         // Se está removendo horários
         if (horariosNovos.length === 0) {
-          console.log('Removendo horários do dia:', modalConfig.diaSemana);
           novoHorarios[modalConfig.diaSemana] = {
             ativo: false,
             horarios: []
@@ -211,13 +170,10 @@ export default function SemanalConfig({ horarios, onChange, datasDisponiveis = [
 
           // Se houver replicação, adiciona aos outros dias ativos
           if (replicar) {
-            console.log('Replicando horários para dias ativos...');
             // Pega apenas os dias que já estão ativos
             const diasAtivos = Object.entries(horarios)
               .filter(([dia, config]) => isDiaDisponivelNaLoja(dia) && config.ativo && config.horarios.length > 0)
               .map(([dia]) => dia);
-
-            console.log('Dias ativos encontrados:', diasAtivos);
 
             // Replica para todos os dias ativos
             diasAtivos.forEach(dia => {
@@ -228,15 +184,12 @@ export default function SemanalConfig({ horarios, onChange, datasDisponiveis = [
           }
         }
 
-        console.log('Novo estado dos horários:', novoHorarios);
         onChange(novoHorarios);
       }
     } catch (err) {
-      console.error('Erro ao salvar horários:', err);
       setError(err.message || 'Erro ao salvar horários. Tente novamente.');
     } finally {
       setIsLoading(false);
-      console.log('===================\n');
       setModalConfig({ isOpen: false, diaSemana: null, horarios: [] });
     }
   };
@@ -292,11 +245,6 @@ export default function SemanalConfig({ horarios, onChange, datasDisponiveis = [
     // Primeiro verifica se o dia da semana está disponível na loja
     const diaSemana = diasDaSemana[date.getDay()].key;
     if (!isDiaDisponivelNaLoja(diaSemana)) {
-      console.log('Data desabilitada - dia não disponível na loja:', {
-        data: date,
-        diaSemana,
-        disponivel: isDiaDisponivelNaLoja(diaSemana)
-      });
       return true;
     }
     
@@ -307,17 +255,19 @@ export default function SemanalConfig({ horarios, onChange, datasDisponiveis = [
     const dateStr = normalizeDateString(date);
     
     // Verifica se a data está na lista de datas disponíveis
-    const isDisabled = !datasDisponiveis.some(dataDisp => normalizeDateString(dataDisp) === dateStr);
-    
-    if (isDisabled) {
-      console.log('Data desabilitada - não está na lista de datas disponíveis:', {
-        data: date,
-        dateStr,
-        datasDisponiveis: datasDisponiveis.map(d => normalizeDateString(d))
-      });
-    }
-    
-    return isDisabled;
+    return !datasDisponiveis.some(dataDisp => normalizeDateString(dataDisp) === dateStr);
+  };
+
+  // Função para formatar os horários de forma padronizada
+  const formatHorarios = (horarios) => {
+    return horarios
+      .sort()
+      .map((h, idx) => (
+        <span key={h} className="inline-block">
+          <span className="text-gray-300">{h}</span>
+          {idx < horarios.length - 1 && <span className="text-gray-500 mx-1">•</span>}
+        </span>
+      ));
   };
 
   return (
@@ -353,48 +303,62 @@ export default function SemanalConfig({ horarios, onChange, datasDisponiveis = [
       {/* Lista de dias */}
       <div className="space-y-4">
         {diasDaSemana.map(({ key, label }) => {
-          const isAtivo = isDiaSemanaAtivo(key);
-          const isDisponivel = isDiaDisponivelNaLoja(key);
-          const isHovered = hoveredWeekday === diasDaSemana.findIndex(d => d.key === key);
+          const config = horarios[key] || { ativo: false, horarios: [] };
+          const isDisabled = !isDiaDisponivelNaLoja(key);
+          const isHovered = hoveredWeekday === key;
 
           return (
-            <div 
-              key={key} 
+            <div
+              key={key}
               className={`
-                p-4 rounded-lg border transition-all duration-200
-                ${isDisponivel ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'}
-                ${isAtivo ? 'bg-orange-500/20 border-orange-500/30' : 'bg-gray-800 border-gray-700'}
-                ${isHovered ? 'border-orange-500/50' : ''}
-                ${isDisponivel ? 'hover:border-orange-500/50' : ''}
+                bg-gray-800 rounded-lg p-4 transition-all duration-200
+                ${isDisabled ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-700/50 cursor-pointer'}
+                ${isHovered ? 'ring-2 ring-orange-500/50' : ''}
               `}
-              onClick={() => isDisponivel && toggleDia(key)}
+              onClick={() => !isDisabled && handleOpenModal(key)}
+              onMouseEnter={() => setHoveredWeekday(key)}
+              onMouseLeave={() => setHoveredWeekday(null)}
             >
               <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-4">
-                  <span className={`text-lg ${isAtivo ? 'text-orange-500' : 'text-gray-400'}`}>
-                    {label}
-                  </span>
-                  {!isDisponivel && (
-                    <span className="text-sm text-gray-500">
-                      (Indisponível)
-                    </span>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center space-x-2">
+                    <span className="text-gray-200 font-medium">{label}</span>
+                    {config.ativo && (
+                      <span className="bg-orange-500/20 text-orange-400 text-xs px-2 py-0.5 rounded-full">
+                        Ativo
+                      </span>
+                    )}
+                  </div>
+                  {config.ativo && config.horarios.length > 0 && (
+                    <div className="text-sm mt-1 truncate">
+                      {formatHorarios(config.horarios)}
+                    </div>
                   )}
                 </div>
-                {isAtivo && (
-                  <div className="flex items-center space-x-4">
-                    <span className="text-sm text-gray-400">
-                      {horarios[key].horarios.length} horário(s)
-                    </span>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        toggleDia(key);
-                      }}
-                      className="text-gray-400 hover:text-red-500 transition-colors"
-                    >
-                      <TrashIcon className="h-5 w-5" />
-                    </button>
-                  </div>
+                {!isDisabled && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (config.ativo) {
+                        onChange({
+                          ...horarios,
+                          [key]: {
+                            ativo: false,
+                            horarios: []
+                          }
+                        });
+                      } else {
+                        handleOpenModal(key);
+                      }
+                    }}
+                    className="p-2 text-gray-400 hover:text-gray-300 transition-colors"
+                  >
+                    {config.ativo ? (
+                      <TrashIcon className="w-5 h-5 hover:text-red-400" />
+                    ) : (
+                      <PlusIcon className="w-5 h-5" />
+                    )}
+                  </button>
                 )}
               </div>
             </div>

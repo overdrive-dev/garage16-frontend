@@ -88,16 +88,8 @@ export default function Calendar({
   };
 
   const handleDateClick = (date) => {
-    console.log('Calendar handleDateClick - date:', date);
-    console.log('Calendar handleDateClick - selected:', selected);
-    console.log('Calendar handleDateClick - mode:', mode);
-
     // Normaliza a data para o fuso horário local
-    const localDate = new Date(
-      date.getFullYear(),
-      date.getMonth(),
-      date.getDate()
-    );
+    const localDate = normalizeDate(date);
 
     if (weekView) {
       if (!isDateDisabled(localDate)) {
@@ -109,13 +101,11 @@ export default function Calendar({
     switch (mode) {
       case 'range': {
         if (!selected?.from || (selected.from && selected.to)) {
-          console.log('Calendar handleDateClick - iniciando nova seleção');
           onChange({ 
             from: localDate, 
             to: null 
           });
         } else {
-          console.log('Calendar handleDateClick - completando range');
           onChange({ 
             from: selected.from,
             to: localDate

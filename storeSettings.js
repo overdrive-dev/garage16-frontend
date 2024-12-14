@@ -7,6 +7,9 @@ admin.initializeApp({
 
 const db = admin.firestore();
 
+// Log inicial com timestamp
+console.log(`[${new Date().toISOString()}] Iniciando configuração da loja`);
+
 const storeSettings = {
   weekDays: {
     dom: { active: false, slots: [] },
@@ -37,10 +40,12 @@ const storeSettings = {
 
 db.collection('storeSettings').doc('default').set(storeSettings)
   .then(() => {
-    console.log('Configurações da loja salvas com sucesso!');
+    console.log(`[${new Date().toISOString()}] Configurações da loja salvas com sucesso!`);
+    console.log('[DEBUG] Estrutura final salva:', JSON.stringify(storeSettings, null, 2));
     process.exit(0);
   })
   .catch((error) => {
-    console.error('Erro ao salvar configurações:', error);
+    console.error(`[${new Date().toISOString()}] Erro ao salvar configurações:`, error);
+    console.error('[DEBUG] Estado das configurações no momento do erro:', JSON.stringify(storeSettings, null, 2));
     process.exit(1);
   });

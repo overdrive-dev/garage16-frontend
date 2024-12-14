@@ -4,21 +4,28 @@ import { startOfDay, format, parseISO } from 'date-fns';
 export const normalizeDate = (date) => {
   if (!date) return null;
   
-  // Se já é uma data, retorna uma nova instância com o mesmo dia local
+  let normalizedDate;
+
+  // Se já é uma data, usa ela diretamente
   if (date instanceof Date) {
-    return new Date(
-      date.getFullYear(),
-      date.getMonth(),
-      date.getDate()
-    );
+    normalizedDate = date;
+  } else {
+    // Se é string, primeiro tenta parsear como YYYY-MM-DD
+    if (typeof date === 'string' && date.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      const [year, month, day] = date.split('-').map(Number);
+      normalizedDate = new Date(year, month - 1, day);
+    } else {
+      // Se não for no formato YYYY-MM-DD, usa o construtor padrão
+      normalizedDate = new Date(date);
+    }
   }
-  
-  // Se é string, converte para data local
-  const parsedDate = new Date(date);
+
+  // Ajusta para meia-noite no fuso horário local usando UTC
   return new Date(
-    parsedDate.getFullYear(),
-    parsedDate.getMonth(),
-    parsedDate.getDate()
+    normalizedDate.getFullYear(),
+    normalizedDate.getMonth(),
+    normalizedDate.getDate(),
+    0, 0, 0, 0
   );
 };
 
@@ -30,7 +37,7 @@ export const normalizeDateString = (date) => {
   const normalizedDate = normalizeDate(date);
   if (!normalizedDate) return null;
 
-  // Formata como YYYY-MM-DD
+  // Formata como YYYY-MM-DD usando os componentes locais da data
   const year = normalizedDate.getFullYear();
   const month = String(normalizedDate.getMonth() + 1).padStart(2, '0');
   const day = String(normalizedDate.getDate()).padStart(2, '0');

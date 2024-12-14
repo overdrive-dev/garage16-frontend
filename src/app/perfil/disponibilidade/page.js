@@ -213,10 +213,9 @@ export default function DisponibilidadePage() {
             <div className="bg-gray-800/50 rounded-lg p-6 border border-gray-700">
               {currentConfig.tipo === 'dataUnica' && (
                 <DataUnicaConfig 
-                  datas={currentConfig.dataUnica.horarios}
+                  datas={currentConfig.dataUnica}
                   ultimoHorario={currentConfig.dataUnica?.ultimoHorario || []}
                   onChange={(novasHorarios) => {
-                    console.log('[DEBUG] Atualizando horários de data única:', novasHorarios);
                     updateCurrentConfig(prev => ({
                       ...prev,
                       dataUnica: {
