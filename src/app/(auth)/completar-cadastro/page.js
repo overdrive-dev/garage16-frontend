@@ -1,12 +1,14 @@
 'use client'
 
-import { useState, useEffect } from 'react';
+import { Suspense, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import Header from '@/components/Header';
 import ListaEnderecos from '@/components/ListaEnderecos';
+import LoadingComponent from '@/components/disponibilidade/LoadingComponent';
 
-export default function CompleteSignUpPage() {
+// Componente do formulário de completar cadastro
+function CompletarCadastroForm() {
   const { user, updateUserProfile, saveEndereco, deleteEndereco, isProfileComplete } = useAuth();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -234,5 +236,19 @@ export default function CompleteSignUpPage() {
         </div>
       </main>
     </>
+  );
+}
+
+// Componente que lida com a lógica de completar cadastro
+function CompletarCadastroContent() {
+  return <CompletarCadastroForm />;
+}
+
+// Página principal com Suspense
+export default function CompletarCadastroPage() {
+  return (
+    <Suspense fallback={<LoadingComponent />}>
+      <CompletarCadastroContent />
+    </Suspense>
   );
 } 

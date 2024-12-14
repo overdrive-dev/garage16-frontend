@@ -1,11 +1,14 @@
 'use client'
 
+import { Suspense } from 'react';
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
+import LoadingComponent from '@/components/disponibilidade/LoadingComponent';
 
-export default function SignUpPage() {
+// Componente do formulário de criação de conta
+function CriarContaForm() {
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -20,15 +23,18 @@ export default function SignUpPage() {
     }
   });
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const router = useRouter();
   const { register } = useAuth();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setLoading(true);
 
     if (formData.password !== formData.confirmPassword) {
       setError('As senhas não coincidem');
+      setLoading(false);
       return;
     }
 
@@ -43,6 +49,8 @@ export default function SignUpPage() {
       } else {
         setError('Erro ao criar conta. Tente novamente.');
       }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -238,14 +246,29 @@ export default function SignUpPage() {
             <div>
               <button
                 type="submit"
-                className="w-full bg-orange-500 text-white py-2 px-4 rounded-md hover:bg-orange-600 transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 focus:ring-offset-gray-800"
+                disabled={loading}
+                className="w-full bg-orange-500 text-white py-2 px-4 rounded-md hover:bg-orange-600 transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 focus:ring-offset-gray-800 disabled:bg-gray-600 disabled:cursor-not-allowed"
               >
-                Criar Conta
+                {loading ? 'Criando conta...' : 'Criar Conta'}
               </button>
             </div>
           </div>
         </form>
       </div>
     </main>
+  );
+}
+
+// Componente que lida com a lógica de criação de conta
+function CriarContaContent() {
+  return <CriarContaForm />;
+}
+
+// Página principal com Suspense
+export default function CriarContaPage() {
+  return (
+    <Suspense fallback={<LoadingComponent />}>
+      <CriarContaContent />
+    </Suspense>
   );
 } 

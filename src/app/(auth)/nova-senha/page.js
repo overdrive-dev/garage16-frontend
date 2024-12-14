@@ -1,10 +1,13 @@
 'use client'
 
+import { Suspense } from 'react';
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
+import LoadingComponent from '@/components/disponibilidade/LoadingComponent';
 
-export default function NewPasswordPage() {
+// Componente do formulário separado
+function NovaSenhaForm({ oobCode }) {
   const [formData, setFormData] = useState({
     password: '',
     confirmPassword: ''
@@ -12,18 +15,7 @@ export default function NewPasswordPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
-  const searchParams = useSearchParams();
   const { confirmPasswordReset } = useAuth();
-
-  // Pega o código da URL
-  const oobCode = searchParams.get('oobCode');
-
-  useEffect(() => {
-    // Se não tiver código na URL, redireciona para a página de login
-    if (!oobCode) {
-      router.push('/entrar');
-    }
-  }, [oobCode, router]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -59,10 +51,6 @@ export default function NewPasswordPage() {
       [name]: value
     }));
   };
-
-  if (!oobCode) {
-    return null;
-  }
 
   return (
     <main className="min-h-screen bg-gray-900 flex items-center justify-center px-4">
@@ -127,5 +115,33 @@ export default function NewPasswordPage() {
         </form>
       </div>
     </main>
+  );
+}
+
+// Componente que lida com a lógica de verificação do código
+function NovaSenhaContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const oobCode = searchParams.get('oobCode');
+
+  useEffect(() => {
+    if (!oobCode) {
+      router.push('/entrar');
+    }
+  }, [oobCode, router]);
+
+  if (!oobCode) {
+    return null;
+  }
+
+  return <NovaSenhaForm oobCode={oobCode} />;
+}
+
+// Página principal com Suspense
+export default function NovaSenhaPage() {
+  return (
+    <Suspense fallback={<LoadingComponent />}>
+      <NovaSenhaContent />
+    </Suspense>
   );
 } 

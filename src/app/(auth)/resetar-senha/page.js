@@ -1,11 +1,14 @@
 'use client'
 
+import { Suspense } from 'react';
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
+import LoadingComponent from '@/components/disponibilidade/LoadingComponent';
 
-export default function ResetPasswordPage() {
+// Componente do formulário de resetar senha
+function ResetarSenhaForm() {
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
@@ -83,7 +86,7 @@ export default function ResetPasswordPage() {
 
               <div className="text-center">
                 <Link 
-                  href="/auth/login"
+                  href="/entrar"
                   className="text-orange-500 hover:text-orange-400 text-sm"
                 >
                   Voltar para o login
@@ -94,5 +97,19 @@ export default function ResetPasswordPage() {
         </form>
       </div>
     </main>
+  );
+}
+
+// Componente que lida com a lógica de resetar senha
+function ResetarSenhaContent() {
+  return <ResetarSenhaForm />;
+}
+
+// Página principal com Suspense
+export default function ResetarSenhaPage() {
+  return (
+    <Suspense fallback={<LoadingComponent />}>
+      <ResetarSenhaContent />
+    </Suspense>
   );
 } 
