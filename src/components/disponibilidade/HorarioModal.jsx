@@ -2,7 +2,7 @@ import { Dialog } from '@headlessui/react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useState, useEffect } from 'react';
-import { normalizeDate, isValidDate } from '@/utils/dateUtils';
+import { normalizeDate, isValidDate, normalizeDateString } from '@/utils/dateUtils';
 import { useDisponibilidade } from '@/contexts/DisponibilidadeContext';
 
 export default function HorarioModal({
@@ -18,7 +18,7 @@ export default function HorarioModal({
   diaSemana,
   horariosDisponiveis = []
 }) {
-  const { storeSettings } = useDisponibilidade();
+  const { storeSettings, availableSlots } = useDisponibilidade();
   const [horarios, setHorarios] = useState(selectedHorarios);
   const [replicarHorario, setReplicarHorario] = useState(false);
   const [tipoReplicacao, setTipoReplicacao] = useState('nenhuma');
@@ -66,21 +66,26 @@ export default function HorarioModal({
     setHasChanges(horariosChanged);
   }, [horarios, selectedHorarios]);
 
-  // Verifica se um horário está disponível para o dia da semana
+  // Verifica se um horário está disponível para a data atual
   const isHorarioDisponivel = (horario) => {
-    if (!diaSemana) return true;
-    return storeSettings?.weekDays?.[diaSemana]?.slots?.includes(horario);
+    // Usa diretamente os horários disponíveis passados como prop
+    return horariosDisponiveis.includes(horario);
   };
 
-  // Pega os horários disponíveis para o dia atual
+  // Pega os horários disponíveis para a data atual
   const getHorariosDisponiveis = () => {
-    if (!diaSemana || !storeSettings?.weekDays?.[diaSemana]?.slots) {
-      return horariosDisponiveis;
-    }
-    return storeSettings.weekDays[diaSemana].slots;
+    // Usa diretamente os horários disponíveis passados como prop
+    return horariosDisponiveis;
   };
 
   const toggleHorario = (horario) => {
+    console.log('[HorarioModal] Tentando alternar horário:', {
+      horario,
+      disponivel: isHorarioDisponivel(horario),
+      horariosSelecionados: horarios,
+      horariosDisponiveis: getHorariosDisponiveis()
+    });
+
     // Verifica se o horário está disponível antes de permitir a seleção
     if (!isHorarioDisponivel(horario)) return;
 
@@ -88,11 +93,9 @@ export default function HorarioModal({
       ? horarios.filter(h => h !== horario)
       : [...horarios, horario].sort();
 
-    console.log('[DEBUG] toggleHorario:', {
-      horario,
-      horarioAnterior: horarios,
-      novosHorarios,
-      tipoConfiguracao
+    console.log('[HorarioModal] Horários atualizados:', {
+      antes: horarios,
+      depois: novosHorarios
     });
 
     setHorarios(novosHorarios);
@@ -108,7 +111,12 @@ export default function HorarioModal({
     onConfirm({
       horarios,
       replicar: replicarHorario,
-      tipoConfiguracao
+      tipoReplicacao,
+      diasSemana: tipoReplicacao === 'diasSemana' ? 
+        Object.entries(diasSemana)
+          .filter(([_, value]) => value)
+          .map(([key]) => key) : 
+        null
     });
     onClose();
   };

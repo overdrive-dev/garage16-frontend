@@ -14,7 +14,7 @@ export default function DataUnicaConfig({ datas = {}, onChange, ultimoHorario = 
   console.log('[DataUnicaConfig] Props iniciais:', {
     datasRecebidas: datas,
     ultimoHorarioRecebido: ultimoHorario,
-    availableSlots: Object.keys(availableSlots || {}).length,
+    availableSlots: availableSlots?.slots ? Object.keys(availableSlots.slots).length : 0,
     storeSettingsPresente: !!storeSettings
   });
   
@@ -30,18 +30,27 @@ export default function DataUnicaConfig({ datas = {}, onChange, ultimoHorario = 
 
   // Memoriza as datas disponíveis para evitar recálculos
   const availableDates = useMemo(() => {
-    if (!availableSlots) return [];
-    return Object.keys(availableSlots).map(dateStr => normalizeDate(dateStr));
+    if (!availableSlots?.slots) return [];
+    return Object.keys(availableSlots.slots).map(dateStr => normalizeDate(dateStr));
   }, [availableSlots]);
 
   // Memoriza a função de verificação de disponibilidade
   const isDateDisabled = useMemo(() => {
     return (date) => {
-      if (!date || !availableSlots) return true;
+      if (!date) return true;
+      
+      // Verifica se a data tem slots disponíveis na loja
+      const diaSemana = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sab'][date.getDay()];
+      const slotsLoja = storeSettings?.weekDays?.[diaSemana]?.slots || [];
+      
+      // Verifica se a data tem slots específicos
       const dateStr = normalizeDateString(date);
-      return !availableSlots[dateStr];
+      const slotsData = availableSlots?.slots?.[dateStr] || [];
+      
+      // A data está habilitada se tiver slots da loja OU slots específicos
+      return slotsLoja.length === 0 && slotsData.length === 0;
     };
-  }, [availableSlots]);
+  }, [availableSlots, storeSettings]);
 
   // Pega os horários disponíveis para uma data
   const getHorariosDisponiveis = (dateStr) => {
@@ -62,11 +71,36 @@ export default function DataUnicaConfig({ datas = {}, onChange, ultimoHorario = 
   const handleListClick = (dateStr) => {
     const horarios = horariosConfig?.[dateStr] || [];
     const showReplicacao = verificarReplicacao(dateStr);
+    const date = normalizeDate(dateStr);
+    const diaSemana = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sab'][date.getDay()];
+    
+    // Pega os slots disponíveis da loja e da data específica
+    const slotsLoja = storeSettings?.weekDays?.[diaSemana]?.slots || [];
+    const slotsData = availableSlots?.slots?.[dateStr] || [];
+    const horariosDisponiveis = Array.from(new Set([...slotsLoja, ...slotsData])).sort();
+
+    console.log('[DataUnicaConfig] Clique na lista:', {
+      dateStr,
+      diaSemana,
+      slotsLoja,
+      slotsData,
+      horariosDisponiveis,
+      horariosSelecionados: horarios,
+      showReplicacao,
+      storeSettings: !!storeSettings
+    });
+
+    // Se não houver horários disponíveis, não abre o modal
+    if (horariosDisponiveis.length === 0) {
+      console.log('[DataUnicaConfig] Data sem horários disponíveis:', dateStr);
+      return;
+    }
 
     setModalConfig({
       isOpen: true,
       dateKey: dateStr,
       horarios,
+      horariosDisponiveis,
       showReplicacao
     });
   };
@@ -80,32 +114,37 @@ export default function DataUnicaConfig({ datas = {}, onChange, ultimoHorario = 
     // Normaliza a data selecionada
     const normalizedDate = normalizeDate(date);
     const dateStr = normalizeDateString(normalizedDate);
+    const diaSemana = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sab'][normalizedDate.getDay()];
+
+    // Pega os slots disponíveis da loja e da data específica
+    const slotsLoja = storeSettings?.weekDays?.[diaSemana]?.slots || [];
+    const slotsData = availableSlots?.slots?.[dateStr] || [];
+    const horariosDisponiveis = Array.from(new Set([...slotsLoja, ...slotsData])).sort();
 
     console.log('[DataUnicaConfig] Seleção de data:', {
       dataOriginal: date.toLocaleString('pt-BR'),
       dataNormalizada: normalizedDate.toLocaleString('pt-BR'),
-      dateStr
+      dateStr,
+      diaSemana,
+      slotsLoja,
+      slotsData,
+      horariosDisponiveis,
+      storeSettings: !!storeSettings
     });
 
-    // Verifica se a data está desabilitada
-    if (isDateDisabled(normalizedDate)) {
-      console.log('[DataUnicaConfig] Data desabilitada:', dateStr);
+    // Se não houver horários disponíveis, não abre o modal
+    if (horariosDisponiveis.length === 0) {
+      console.log('[DataUnicaConfig] Data sem horários disponíveis:', dateStr);
       return;
     }
-
-    // Verifica o dia da semana
-    const diaSemana = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sab'][normalizedDate.getDay()];
-    const horariosDisponiveis = storeSettings?.weekDays?.[diaSemana]?.slots || [];
 
     // Verifica se deve mostrar a opção de replicação
     const showReplicacao = verificarReplicacao(dateStr);
 
-    console.log('[DataUnicaConfig] Configuração de horários:', {
-      diaSemana,
+    console.log('[DataUnicaConfig] Abrindo modal:', {
       dateStr,
       horariosDisponiveis,
       horariosSelecionados: horariosConfig[dateStr] || ultimoHorario,
-      diaAtivo: storeSettings?.weekDays?.[diaSemana]?.active,
       showReplicacao
     });
 

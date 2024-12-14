@@ -11,15 +11,11 @@ function normalizeDate(date) {
   try {
     // Se for string, tenta converter para Date
     if (typeof date === 'string') {
-      const normalized = startOfDay(parseISO(date));
-      console.log('[CalendarioPeriodo] Normalizando data string:', { original: date, normalizada: normalized });
-      return normalized;
+      return startOfDay(parseISO(date));
     }
     // Se já for Date, apenas normaliza
     if (date instanceof Date) {
-      const normalized = startOfDay(date);
-      console.log('[CalendarioPeriodo] Normalizando data Date:', { original: date, normalizada: normalized });
-      return normalized;
+      return startOfDay(date);
     }
     console.log('[CalendarioPeriodo] Data inválida:', date);
     return null;
@@ -34,29 +30,19 @@ export default function CalendarioPeriodo({
   onChange,
   minDate = new Date()
 }) {
-  console.log('[CalendarioPeriodo] Props recebidas:', { 
-    selected,
-    selectedType: {
-      inicio: selected.inicio ? typeof selected.inicio : 'null',
-      fim: selected.fim ? typeof selected.fim : 'null'
-    },
-    minDate 
-  });
+  console.log('[CalendarioPeriodo] Props recebidas:', { selected, minDate });
 
   // Efeito para garantir que as datas sejam carregadas inicialmente
   useEffect(() => {
     if (selected.inicio || selected.fim) {
       console.log('[CalendarioPeriodo] Datas selecionadas detectadas:', selected);
+      const normalizedRange = {
+        inicio: selected.inicio ? format(normalizeDate(selected.inicio), 'yyyy-MM-dd') : null,
+        fim: selected.fim ? format(normalizeDate(selected.fim), 'yyyy-MM-dd') : null
+      };
+      console.log('[CalendarioPeriodo] Carregando datas iniciais:', normalizedRange);
     }
   }, [selected]);
-
-  // Normaliza as datas recebidas antes de passar para o Calendar
-  const normalizedSelected = {
-    from: normalizeDate(selected.inicio),
-    to: normalizeDate(selected.fim)
-  };
-
-  console.log('[CalendarioPeriodo] Selected normalizado para Calendar:', normalizedSelected);
 
   const handleDateSelect = (range) => {
     console.log('[CalendarioPeriodo] Range selecionado:', range);
@@ -76,6 +62,14 @@ export default function CalendarioPeriodo({
     console.log('[CalendarioPeriodo] Range normalizado:', normalizedRange);
     onChange(normalizedRange);
   };
+
+  // Normaliza as datas recebidas antes de passar para o Calendar
+  const normalizedSelected = {
+    from: normalizeDate(selected.inicio),
+    to: normalizeDate(selected.fim)
+  };
+
+  console.log('[CalendarioPeriodo] Selected normalizado para Calendar:', normalizedSelected);
 
   return (
     <div className="bg-gray-800 rounded-lg p-4">

@@ -242,11 +242,15 @@ export default function DisponibilidadePage() {
 
               {currentConfig.tipo === 'faixaHorario' && (
                 <PeriodoConfig 
-                  periodo={currentConfig.faixaHorario}
+                  datas={currentConfig.faixaHorario?.horarios || {}}
+                  ultimoHorario={currentConfig.faixaHorario?.ultimoHorario || []}
                   onChange={(updates) => {
                     updateCurrentConfig(prev => ({
                       ...prev,
-                      faixaHorario: updates
+                      faixaHorario: {
+                        ...prev.faixaHorario,
+                        horarios: updates
+                      }
                     }));
                   }}
                 />
