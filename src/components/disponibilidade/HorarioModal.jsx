@@ -69,22 +69,11 @@ export default function HorarioModal({
   // Verifica se um horário está disponível para a data atual
   const isHorarioDisponivel = (horario) => {
     // Usa diretamente os horários disponíveis passados como prop
-    const disponivel = horariosDisponiveis.includes(horario);
-    console.log('[HorarioModal] Verificando disponibilidade:', {
-      horario,
-      disponivel,
-      horariosDisponiveis
-    });
-    return disponivel;
+    return horariosDisponiveis.includes(horario);
   };
 
   // Pega os horários disponíveis para a data atual
   const getHorariosDisponiveis = () => {
-    console.log('[HorarioModal] Obtendo horários disponíveis:', {
-      data: data?.toLocaleDateString('pt-BR'),
-      horariosDisponiveis,
-      totalHorarios: horariosDisponiveis.length
-    });
     // Usa diretamente os horários disponíveis passados como prop
     return horariosDisponiveis;
   };

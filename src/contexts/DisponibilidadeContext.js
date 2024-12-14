@@ -219,23 +219,17 @@ function convertFromFirebase(firebaseData, storeSettings, availableSlots) {
       }
       
       const dateStr = normalizeDateString(data);
-      const date = normalizeDate(dateStr);
-      const diaSemana = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sab'][date.getDay()];
-      
-      // Combina os slots da loja com os slots específicos da data
-      const slotsLoja = storeSettings?.weekDays?.[diaSemana]?.slots || [];
-      const slotsData = availableSlots?.slots?.[dateStr] || [];
-      const horariosDisponiveis = Array.from(new Set([...slotsLoja, ...slotsData])).sort();
-      
+      const horariosDisponiveis = availableSlots?.slots?.[dateStr] || [];
       console.log(`[convertFromFirebase] Processando data ${dateStr}:`, {
         slotsConfigurados: slots,
-        diaSemana,
-        slotsLoja,
-        slotsData,
         horariosDisponiveis
       });
       
-      // Filtra apenas os horários que ainda estão disponíveis
+      if (horariosDisponiveis.length === 0) {
+        console.log(`[convertFromFirebase] Sem horários disponíveis para data ${dateStr}`);
+        return;
+      }
+      
       const horariosPermitidos = slots.filter(horario => 
         horariosDisponiveis.includes(horario)
       ).sort();

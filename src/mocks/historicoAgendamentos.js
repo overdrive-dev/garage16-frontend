@@ -9,13 +9,23 @@ export const STATUS_AGENDAMENTO = {
   CANCELADO: 'cancelado'
 };
 
+// Usuários mockados para testes
+const CURRENT_USER = 'Ki0nY4yfm2apORlsm5WaMcWcNce2';
+const BUYER_USER = '2zxE5yZP1eON5Zckn04E84T4Ii22';
+
 export const historicoAgendamentos = {
   '1': [
     {
       id: 'agend-1',
       data: '2024-03-15T14:00:00Z',
       comprador: {
-        nome: 'João Silva',
+        id: BUYER_USER,
+        nome: 'Victor Sanches',
+        telefone: '(11) 98888-8888'
+      },
+      vendedor: {
+        id: CURRENT_USER,
+        nome: 'Victor Santos',
         telefone: '(11) 99999-9999'
       },
       status: STATUS_AGENDAMENTO.CONCLUIDO,
@@ -25,8 +35,14 @@ export const historicoAgendamentos = {
       id: 'agend-2',
       data: '2024-03-14T10:00:00Z',
       comprador: {
-        nome: 'Maria Santos',
+        id: BUYER_USER,
+        nome: 'Victor Sanches',
         telefone: '(11) 98888-8888'
+      },
+      vendedor: {
+        id: CURRENT_USER,
+        nome: 'Victor Santos',
+        telefone: '(11) 99999-9999'
       },
       status: STATUS_AGENDAMENTO.CANCELADO,
       observacoes: 'Comprador desmarcou: Surgiu um imprevisto'
@@ -35,8 +51,14 @@ export const historicoAgendamentos = {
       id: 'agend-3',
       data: '2024-03-18T16:00:00Z',
       comprador: {
-        nome: 'Pedro Oliveira',
-        telefone: '(11) 97777-7777'
+        id: BUYER_USER,
+        nome: 'Victor Sanches',
+        telefone: '(11) 98888-8888'
+      },
+      vendedor: {
+        id: CURRENT_USER,
+        nome: 'Victor Santos',
+        telefone: '(11) 99999-9999'
       },
       status: STATUS_AGENDAMENTO.AGENDADO,
       observacoes: null
@@ -47,8 +69,14 @@ export const historicoAgendamentos = {
       id: 'agend-4',
       data: '2024-03-13T11:00:00Z',
       comprador: {
-        nome: 'Carlos Ferreira',
-        telefone: '(11) 96666-6666'
+        id: BUYER_USER,
+        nome: 'Victor Sanches',
+        telefone: '(11) 98888-8888'
+      },
+      vendedor: {
+        id: CURRENT_USER,
+        nome: 'Victor Santos',
+        telefone: '(11) 99999-9999'
       },
       status: STATUS_AGENDAMENTO.CONCLUIDO,
       observacoes: 'Cliente achou o preço alto'
@@ -57,8 +85,14 @@ export const historicoAgendamentos = {
       id: 'agend-5',
       data: '2024-03-12T15:30:00Z',
       comprador: {
-        nome: 'Ana Beatriz',
-        telefone: '(11) 95555-5555'
+        id: BUYER_USER,
+        nome: 'Victor Sanches',
+        telefone: '(11) 98888-8888'
+      },
+      vendedor: {
+        id: CURRENT_USER,
+        nome: 'Victor Santos',
+        telefone: '(11) 99999-9999'
       },
       status: STATUS_AGENDAMENTO.CANCELADO,
       observacoes: 'Vendedor desmarcou: Manutenção necessária'
@@ -69,8 +103,14 @@ export const historicoAgendamentos = {
       id: 'agend-6',
       data: '2024-03-10T09:00:00Z',
       comprador: {
-        nome: 'Roberto Souza',
-        telefone: '(11) 94444-4444'
+        id: BUYER_USER,
+        nome: 'Victor Sanches',
+        telefone: '(11) 98888-8888'
+      },
+      vendedor: {
+        id: CURRENT_USER,
+        nome: 'Victor Santos',
+        telefone: '(11) 99999-9999'
       },
       status: STATUS_AGENDAMENTO.CONCLUIDO,
       observacoes: 'Cliente muito interessado, pediu prazo para pensar'
@@ -79,8 +119,14 @@ export const historicoAgendamentos = {
       id: 'agend-7',
       data: '2024-03-11T16:00:00Z',
       comprador: {
-        nome: 'Fernanda Lima',
-        telefone: '(11) 93333-3333'
+        id: BUYER_USER,
+        nome: 'Victor Sanches',
+        telefone: '(11) 98888-8888'
+      },
+      vendedor: {
+        id: CURRENT_USER,
+        nome: 'Victor Santos',
+        telefone: '(11) 99999-9999'
       },
       status: STATUS_AGENDAMENTO.CONCLUIDO,
       observacoes: 'Visita realizada com sucesso'
@@ -91,8 +137,14 @@ export const historicoAgendamentos = {
       id: 'agend-8',
       data: '2024-03-09T10:00:00Z',
       comprador: {
-        nome: 'Lucas Mendes',
-        telefone: '(11) 92222-2222'
+        id: BUYER_USER,
+        nome: 'Victor Sanches',
+        telefone: '(11) 98888-8888'
+      },
+      vendedor: {
+        id: CURRENT_USER,
+        nome: 'Victor Santos',
+        telefone: '(11) 99999-9999'
       },
       status: STATUS_AGENDAMENTO.CONCLUIDO,
       observacoes: 'Cliente aprovou a moto e fechou negócio'
@@ -101,8 +153,14 @@ export const historicoAgendamentos = {
       id: 'agend-9',
       data: '2024-03-08T14:30:00Z',
       comprador: {
-        nome: 'Mariana Costa',
-        telefone: '(11) 91111-1111'
+        id: BUYER_USER,
+        nome: 'Victor Sanches',
+        telefone: '(11) 98888-8888'
+      },
+      vendedor: {
+        id: CURRENT_USER,
+        nome: 'Victor Santos',
+        telefone: '(11) 99999-9999'
       },
       status: STATUS_AGENDAMENTO.CANCELADO,
       observacoes: 'Cliente desmarcou: Encontrou outra opção'
@@ -113,8 +171,14 @@ export const historicoAgendamentos = {
       id: 'agend-10',
       data: '2024-03-16T11:00:00Z',
       comprador: {
-        nome: 'Gabriel Santos',
-        telefone: '(11) 90000-0000'
+        id: BUYER_USER,
+        nome: 'Victor Sanches',
+        telefone: '(11) 98888-8888'
+      },
+      vendedor: {
+        id: CURRENT_USER,
+        nome: 'Victor Santos',
+        telefone: '(11) 99999-9999'
       },
       status: STATUS_AGENDAMENTO.AGENDADO,
       observacoes: null

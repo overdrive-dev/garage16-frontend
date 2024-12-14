@@ -2,32 +2,45 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 
-export default function LoginForm() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const router = useRouter();
+export default function LoginPage() {
   const { login, loginWithGoogle } = useAuth();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError('');
+    setLoading(true);
+
+    const formData = new FormData(e.target);
+    const email = formData.get('email');
+    const password = formData.get('password');
+
     try {
       await login(email, password);
     } catch (error) {
-      setError('Email ou senha inválidos');
+      console.error('Erro no login:', error);
+      if (error.code === 'auth/invalid-credential') {
+        setError('Email ou senha inválidos');
+      } else {
+        setError('Erro ao fazer login. Tente novamente.');
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleGoogleLogin = async () => {
     try {
+      setError('');
+      setLoading(true);
       await loginWithGoogle();
     } catch (error) {
-      if (!error.message.includes('cancelado')) {
-        setError(error.message);
-      }
+      setError(error.message);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -38,57 +51,54 @@ export default function LoginForm() {
           <h2 className="text-center text-3xl font-bold text-white">
             Entrar
           </h2>
+          <p className="mt-2 text-center text-gray-400">
+            Ou{' '}
+            <Link href="/criar-conta" className="text-orange-500 hover:text-orange-400">
+              criar uma nova conta
+            </Link>
+          </p>
         </div>
+
+        {error && (
+          <div className="bg-red-500/10 border border-red-500 text-red-500 rounded-lg p-4 text-sm">
+            {error}
+          </div>
+        )}
 
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           <div className="space-y-6 bg-gray-800/50 rounded-lg p-6 border border-gray-700">
-            {error && (
-              <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-3 rounded">
-                {error}
-              </div>
-            )}
-
             <div>
-              <label className="block text-sm font-medium text-gray-200">
+              <label htmlFor="email" className="block text-sm font-medium text-gray-200">
                 Email
               </label>
               <input
+                id="email"
+                name="email"
                 type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-gray-100 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                autoComplete="email"
                 required
+                className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-gray-100 focus:outline-none focus:ring-2 focus:ring-orange-500"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-200">
+              <label htmlFor="password" className="block text-sm font-medium text-gray-200">
                 Senha
               </label>
               <input
+                id="password"
+                name="password"
                 type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-gray-100 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                autoComplete="current-password"
                 required
+                className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-gray-100 focus:outline-none focus:ring-2 focus:ring-orange-500"
               />
             </div>
 
             <div className="flex items-center justify-between">
               <div className="text-sm">
-                <Link 
-                  href="/recuperar-senha"
-                  className="text-orange-500 hover:text-orange-400"
-                >
+                <Link href="/recuperar-senha" className="text-orange-500 hover:text-orange-400">
                   Esqueceu sua senha?
-                </Link>
-              </div>
-              <div className="text-sm">
-                <Link 
-                  href="/criar-conta"
-                  className="text-orange-500 hover:text-orange-400"
-                >
-                  Criar conta
                 </Link>
               </div>
             </div>
@@ -96,9 +106,10 @@ export default function LoginForm() {
             <div>
               <button
                 type="submit"
-                className="w-full bg-orange-500 text-white py-2 px-4 rounded-md hover:bg-orange-600 transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 focus:ring-offset-gray-800"
+                disabled={loading}
+                className="w-full bg-orange-500 text-white py-2 px-4 rounded-md hover:bg-orange-600 transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 focus:ring-offset-gray-800 disabled:bg-gray-600 disabled:cursor-not-allowed"
               >
-                Entrar
+                {loading ? 'Entrando...' : 'Entrar'}
               </button>
             </div>
 
@@ -107,9 +118,7 @@ export default function LoginForm() {
                 <div className="w-full border-t border-gray-700"></div>
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-gray-800/50 text-gray-400">
-                  Ou continue com
-                </span>
+                <span className="px-2 bg-gray-800/50 text-gray-400">Ou continue com</span>
               </div>
             </div>
 
@@ -117,7 +126,8 @@ export default function LoginForm() {
               <button
                 type="button"
                 onClick={handleGoogleLogin}
-                className="w-full bg-gray-700 text-gray-200 py-2 px-4 rounded-md hover:bg-gray-600 transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 focus:ring-offset-gray-800 flex items-center justify-center space-x-2"
+                disabled={loading}
+                className="w-full flex items-center justify-center space-x-2 bg-gray-700 text-gray-200 py-2 px-4 rounded-md hover:bg-gray-600 transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 focus:ring-offset-gray-800 disabled:bg-gray-800 disabled:cursor-not-allowed"
               >
                 <svg className="w-5 h-5" viewBox="0 0 24 24">
                   <path
@@ -137,7 +147,7 @@ export default function LoginForm() {
                     d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
                   />
                 </svg>
-                <span>Google</span>
+                <span>Continuar com Google</span>
               </button>
             </div>
           </div>

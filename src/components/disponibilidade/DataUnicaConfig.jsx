@@ -48,17 +48,7 @@ export default function DataUnicaConfig({ datas = {}, onChange, ultimoHorario = 
       const slotsData = availableSlots?.slots?.[dateStr] || [];
       
       // A data está habilitada se tiver slots da loja OU slots específicos
-      const isDisabled = slotsLoja.length === 0 && slotsData.length === 0;
-      
-      console.log('[DataUnicaConfig] Verificando se data está desabilitada:', {
-        date: date.toLocaleDateString('pt-BR'),
-        diaSemana,
-        slotsLoja,
-        slotsData,
-        isDisabled
-      });
-      
-      return isDisabled;
+      return slotsLoja.length === 0 && slotsData.length === 0;
     };
   }, [availableSlots, storeSettings]);
 
@@ -67,13 +57,7 @@ export default function DataUnicaConfig({ datas = {}, onChange, ultimoHorario = 
     if (!dateStr) return [];
     const date = normalizeDate(dateStr);
     const diaSemana = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sab'][date.getDay()];
-    
-    // Pega os slots disponíveis da loja e da data específica
-    const slotsLoja = storeSettings?.weekDays?.[diaSemana]?.slots || [];
-    const slotsData = availableSlots?.slots?.[dateStr] || [];
-    
-    // Combina os slots e remove duplicatas
-    return Array.from(new Set([...slotsLoja, ...slotsData])).sort();
+    return storeSettings?.weekDays?.[diaSemana]?.slots || [];
   };
 
   const verificarReplicacao = (dataAtual) => {
@@ -186,12 +170,6 @@ export default function DataUnicaConfig({ datas = {}, onChange, ultimoHorario = 
 
       // Verifica se os horários selecionados estão disponíveis
       const horariosDisponiveis = getHorariosDisponiveis(modalConfig.dateKey);
-      console.log('[DataUnicaConfig] Verificando horários disponíveis:', {
-        dateKey: modalConfig.dateKey,
-        horariosDisponiveis,
-        horariosNovos
-      });
-      
       const horariosValidos = horariosNovos.filter(h => horariosDisponiveis.includes(h));
 
       // Se não tiver horários válidos, remove a data
@@ -217,12 +195,6 @@ export default function DataUnicaConfig({ datas = {}, onChange, ultimoHorario = 
         datasConfiguradas.forEach(dataObj => {
           const dateStr = normalizeDateString(dataObj);
           const horariosDisponiveisData = getHorariosDisponiveis(dateStr);
-          console.log('[DataUnicaConfig] Verificando horários para replicação:', {
-            dateStr,
-            horariosDisponiveisData,
-            horariosNovos
-          });
-          
           const horariosValidosData = horariosNovos.filter(h => horariosDisponiveisData.includes(h));
 
           if (horariosValidosData.length > 0) {
@@ -325,26 +297,20 @@ export default function DataUnicaConfig({ datas = {}, onChange, ultimoHorario = 
           })}
       </div>
 
-      {/* Modal de Horários */}
       {modalConfig.isOpen && (
-        <>
-          {console.log('[DataUnicaConfig] Renderizando modal:', {
-            dateKey: modalConfig.dateKey,
-            horarios: modalConfig.horarios,
-            horariosDisponiveis: modalConfig.horariosDisponiveis,
-            showReplicacao: modalConfig.showReplicacao
-          })}
-          <HorarioModal
-            isOpen={modalConfig.isOpen}
-            onClose={handleModalClose}
-            onConfirm={handleHorarioConfirm}
-            selectedHorarios={modalConfig.horarios}
-            data={modalConfig.dateKey ? normalizeDate(modalConfig.dateKey) : null}
-            showReplicacao={modalConfig.showReplicacao}
-            tipoConfiguracao="dataUnica"
-            horariosDisponiveis={modalConfig.horariosDisponiveis}
-          />
-        </>
+        <HorarioModal
+          isOpen={modalConfig.isOpen}
+          onClose={handleModalClose}
+          onConfirm={handleHorarioConfirm}
+          data={modalConfig.dateKey ? normalizeDate(modalConfig.dateKey) : null}
+          selectedHorarios={modalConfig.horarios}
+          showReplicacao={modalConfig.showReplicacao}
+          tipoConfiguracao="dataUnica"
+          horariosDisponiveis={modalConfig.horariosDisponiveis}
+          diaSemana={modalConfig.dateKey ? ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sab'][normalizeDate(modalConfig.dateKey).getDay()] : null}
+          isNewRange={false}
+          periodo={null}
+        />
       )}
     </div>
   );

@@ -507,210 +507,232 @@ export default function MeusAnuncios() {
 
       {/* Lista de Anúncios */}
       <div className="bg-gray-800 rounded-xl shadow-lg border border-gray-700 overflow-hidden">
-        {/* Tabela para Desktop */}
-        <div className="hidden md:block">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-700">
-              <thead className="bg-gray-900">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase">
-                    <SortButton campo="modelo">Veículo</SortButton>
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase">
-                    <SortButton campo="marca">Marca</SortButton>
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase">
-                    <SortButton campo="preco">Preço</SortButton>
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase">
-                    <SortButton campo="createdAt">Data Cadastro</SortButton>
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase">
-                    <SortButton campo="status">Status</SortButton>
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-400 uppercase">
-                    Ações
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-gray-800 divide-y divide-gray-700">
-                {anunciosOrdenados.map((anuncio, index) => (
-                  <tr key={anuncio.id} className={`hover:bg-gray-700 ${
-                    index === anunciosOrdenados.length - 1 ? 'last:rounded-b-xl' : ''
-                  }`}>
-                    <td className={`px-6 py-4 whitespace-nowrap ${
-                      index === anunciosOrdenados.length - 1 ? 'first:rounded-bl-xl' : ''
-                    }`}>
-                      <div className="flex items-center">
-                        <div className="h-10 w-10 relative flex-shrink-0">
-                          <Image
-                            src={anuncio.imageUrl}
-                            alt={anuncio.modelo}
-                            fill
-                            className="rounded-full object-cover"
-                          />
-                        </div>
-                        <div className="ml-4">
-                          <div className="text-sm font-medium text-gray-100">
-                            {anuncio.modelo}
+        {anunciosOrdenados.length === 0 ? (
+          <div className="p-8 text-center">
+            <div className="flex flex-col items-center justify-center space-y-4">
+              <div className="bg-gray-700/50 rounded-full p-4">
+                <PhotoIcon className="h-8 w-8 text-gray-500" />
+              </div>
+              <div>
+                <p className="text-gray-400 text-lg">Nenhum anúncio encontrado</p>
+                <p className="text-gray-500 text-sm mt-1">Comece criando seu primeiro anúncio</p>
+              </div>
+              <Link
+                href="/veiculos/novo"
+                className="mt-4 inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-orange-500 hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500"
+              >
+                Criar Anúncio
+              </Link>
+            </div>
+          </div>
+        ) : (
+          <>
+            {/* Tabela para Desktop */}
+            <div className="hidden md:block">
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-700">
+                  <thead className="bg-gray-900">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase">
+                        <SortButton campo="modelo">Veículo</SortButton>
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase">
+                        <SortButton campo="marca">Marca</SortButton>
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase">
+                        <SortButton campo="preco">Preço</SortButton>
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase">
+                        <SortButton campo="createdAt">Data Cadastro</SortButton>
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase">
+                        <SortButton campo="status">Status</SortButton>
+                      </th>
+                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-400 uppercase">
+                        Ações
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-gray-800 divide-y divide-gray-700">
+                    {anunciosOrdenados.map((anuncio, index) => (
+                      <tr key={anuncio.id} className={`hover:bg-gray-700 ${
+                        index === anunciosOrdenados.length - 1 ? 'last:rounded-b-xl' : ''
+                      }`}>
+                        <td className={`px-6 py-4 whitespace-nowrap ${
+                          index === anunciosOrdenados.length - 1 ? 'first:rounded-bl-xl' : ''
+                        }`}>
+                          <div className="flex items-center">
+                            <div className="h-10 w-10 relative flex-shrink-0">
+                              <Image
+                                src={anuncio.imageUrl}
+                                alt={anuncio.modelo}
+                                fill
+                                className="rounded-full object-cover"
+                              />
+                            </div>
+                            <div className="ml-4">
+                              <div className="text-sm font-medium text-gray-100">
+                                {anuncio.modelo}
+                              </div>
+                            </div>
                           </div>
-                        </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
+                          {anuncio.marca}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
+                          {new Intl.NumberFormat('pt-BR', {
+                            style: 'currency',
+                            currency: 'BRL'
+                          }).format(anuncio.preco)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
+                          {formatDateTime(anuncio.createdAt)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                            ${anuncio.status === STATUS_ANUNCIO.VENDENDO
+                              ? anuncio.ativo 
+                                ? 'bg-green-900 text-green-300'
+                                : 'bg-yellow-900 text-yellow-300'
+                              : STATUS_COLORS[anuncio.status]
+                            }`}
+                          >
+                            {getStatusLabel(anuncio)}
+                          </span>
+                        </td>
+                        <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium text-right ${
+                          index === anunciosOrdenados.length - 1 ? 'last:rounded-br-xl' : ''
+                        }`}>
+                          <div className="flex items-center justify-end space-x-4">
+                            {getAcoesDisponiveis(anuncio).map(acao => (
+                              <div key={acao.action} className="relative flex items-center">
+                                <button
+                                  onClick={() => handleAction(anuncio.id, acao.action)}
+                                  className={`text-gray-400 hover:text-${
+                                    acao.action === 'cancelar' ? 'red' : 
+                                    acao.action === 'marcar_vendido' ? 'green' : 
+                                    'orange'
+                                  }-400 transition-colors group flex items-center`}
+                                >
+                                  <acao.icon className="h-5 w-5" />
+                                  <span className="pointer-events-none absolute right-full mr-2 top-1/2 -translate-y-1/2 px-2 py-1 text-xs text-gray-100 bg-gray-900 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-[100]">
+                                    {acao.label}
+                                  </span>
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Cards para Mobile */}
+            <div className="md:hidden divide-y divide-gray-700">
+              {anunciosOrdenados.map((anuncio, index) => (
+                <div key={anuncio.id} className={`p-4 space-y-4 ${
+                  index === 0 ? 'first:rounded-t-xl' : ''
+                } ${
+                  index === anunciosOrdenados.length - 1 ? 'last:rounded-b-xl' : ''
+                }`}>
+                  <div className="flex items-center space-x-4">
+                    <div className="h-12 w-12 relative flex-shrink-0">
+                      <Image
+                        src={anuncio.imageUrl}
+                        alt={anuncio.modelo}
+                        fill
+                        className="rounded-full object-cover"
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <div className="text-sm font-medium text-gray-100">
+                        {anuncio.modelo}
                       </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
-                      {anuncio.marca}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
+                      <div className="text-sm text-gray-400">
+                        {anuncio.marca}
+                      </div>
+                    </div>
+                    <div className="text-sm text-gray-400">
                       {new Intl.NumberFormat('pt-BR', {
                         style: 'currency',
                         currency: 'BRL'
                       }).format(anuncio.preco)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
-                      {formatDateTime(anuncio.createdAt)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
-                        ${anuncio.status === STATUS_ANUNCIO.VENDENDO
-                          ? anuncio.ativo 
-                            ? 'bg-green-900 text-green-300'
-                            : 'bg-yellow-900 text-yellow-300'
-                          : STATUS_COLORS[anuncio.status]
-                        }`}
-                      >
-                        {getStatusLabel(anuncio)}
-                      </span>
-                    </td>
-                    <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium text-right ${
-                      index === anunciosOrdenados.length - 1 ? 'last:rounded-br-xl' : ''
-                    }`}>
-                      <div className="flex items-center justify-end space-x-4">
-                        {getAcoesDisponiveis(anuncio).map(acao => (
-                          <div key={acao.action} className="relative flex items-center">
-                            <button
-                              onClick={() => handleAction(anuncio.id, acao.action)}
-                              className={`text-gray-400 hover:text-${
-                                acao.action === 'cancelar' ? 'red' : 
-                                acao.action === 'marcar_vendido' ? 'green' : 
-                                'orange'
-                              }-400 transition-colors group flex items-center`}
-                            >
-                              <acao.icon className="h-5 w-5" />
-                              <span className="pointer-events-none absolute right-full mr-2 top-1/2 -translate-y-1/2 px-2 py-1 text-xs text-gray-100 bg-gray-900 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-[100]">
-                                {acao.label}
-                              </span>
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* Cards para Mobile */}
-        <div className="md:hidden divide-y divide-gray-700">
-          {anunciosOrdenados.map((anuncio, index) => (
-            <div key={anuncio.id} className={`p-4 space-y-4 ${
-              index === 0 ? 'first:rounded-t-xl' : ''
-            } ${
-              index === anunciosOrdenados.length - 1 ? 'last:rounded-b-xl' : ''
-            }`}>
-              <div className="flex items-center space-x-4">
-                <div className="h-12 w-12 relative flex-shrink-0">
-                  <Image
-                    src={anuncio.imageUrl}
-                    alt={anuncio.modelo}
-                    fill
-                    className="rounded-full object-cover"
-                  />
-                </div>
-                <div className="flex-1">
-                  <div className="text-sm font-medium text-gray-100">
-                    {anuncio.modelo}
-                  </div>
-                  <div className="text-sm text-gray-400">
-                    {anuncio.marca}
-                  </div>
-                </div>
-                <div className="text-sm text-gray-400">
-                  {new Intl.NumberFormat('pt-BR', {
-                    style: 'currency',
-                    currency: 'BRL'
-                  }).format(anuncio.preco)}
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${STATUS_COLORS[anuncio.status]}`}>
-                  {getStatusLabel(anuncio)}
-                </span>
-
-                <div className="flex items-center space-x-4">
-                  {/* Botões de ação */}
-                  {(anuncio.status === STATUS_ANUNCIO.VENDENDO || anuncio.status === STATUS_ANUNCIO.VENDIDO) && (
-                    <div className="relative flex items-center">
-                      <Link
-                        href={`/veiculo/${anuncio.slug}`}
-                        className="text-gray-400 hover:text-orange-400 transition-colors group flex items-center"
-                      >
-                        <EyeIcon className="h-5 w-5" />
-                        <span className="pointer-events-none absolute right-full mr-2 top-1/2 -translate-y-1/2 px-2 py-1 text-xs text-gray-100 bg-gray-900 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-[100]">
-                          Visualizar Anúncio
-                        </span>
-                      </Link>
                     </div>
-                  )}
+                  </div>
 
-                  {anuncio.status !== STATUS_ANUNCIO.VENDIDO && (
-                    <>
-                      <div className="relative flex items-center">
-                        <Link
-                          href={`/veiculo/${anuncio.slug}/editar`}
-                          className="text-gray-400 hover:text-orange-400 transition-colors group flex items-center"
-                        >
-                          <PencilSquareIcon className="h-5 w-5" />
-                          <span className="pointer-events-none absolute right-full mr-2 top-1/2 -translate-y-1/2 px-2 py-1 text-xs text-gray-100 bg-gray-900 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-[100]">
-                            Editar
-                          </span>
-                        </Link>
-                      </div>
-                      
-                      {anuncio.status === STATUS_ANUNCIO.VENDENDO && (
+                  <div className="flex items-center justify-between">
+                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${STATUS_COLORS[anuncio.status]}`}>
+                      {getStatusLabel(anuncio)}
+                    </span>
+
+                    <div className="flex items-center space-x-4">
+                      {/* Botões de ação */}
+                      {(anuncio.status === STATUS_ANUNCIO.VENDENDO || anuncio.status === STATUS_ANUNCIO.VENDIDO) && (
                         <div className="relative flex items-center">
-                          <button 
-                            onClick={() => handleMarcarVendido(anuncio.id)}
-                            className="text-gray-400 hover:text-green-400 transition-colors group flex items-center"
+                          <Link
+                            href={`/veiculo/${anuncio.slug}`}
+                            className="text-gray-400 hover:text-orange-400 transition-colors group flex items-center"
                           >
-                            <CheckCircleIcon className="h-5 w-5" />
+                            <EyeIcon className="h-5 w-5" />
                             <span className="pointer-events-none absolute right-full mr-2 top-1/2 -translate-y-1/2 px-2 py-1 text-xs text-gray-100 bg-gray-900 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-[100]">
-                              Marcar como Vendido
+                              Visualizar Anúncio
                             </span>
-                          </button>
+                          </Link>
                         </div>
                       )}
 
-                      <div className="relative flex items-center">
-                        <button 
-                          onClick={() => setCancelModal({ isOpen: true, anuncioId: anuncio.id })}
-                          className="text-gray-400 hover:text-red-400 transition-colors group flex items-center"
-                        >
-                          <XCircleIcon className="h-5 w-5" />
-                          <span className="pointer-events-none absolute right-full mr-2 top-1/2 -translate-y-1/2 px-2 py-1 text-xs text-gray-100 bg-gray-900 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-[100]">
-                            Cancelar Anúncio
-                          </span>
-                        </button>
-                      </div>
-                    </>
-                  )}
+                      {anuncio.status !== STATUS_ANUNCIO.VENDIDO && (
+                        <>
+                          <div className="relative flex items-center">
+                            <Link
+                              href={`/veiculo/${anuncio.slug}/editar`}
+                              className="text-gray-400 hover:text-orange-400 transition-colors group flex items-center"
+                            >
+                              <PencilSquareIcon className="h-5 w-5" />
+                              <span className="pointer-events-none absolute right-full mr-2 top-1/2 -translate-y-1/2 px-2 py-1 text-xs text-gray-100 bg-gray-900 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-[100]">
+                                Editar
+                              </span>
+                            </Link>
+                          </div>
+                          
+                          {anuncio.status === STATUS_ANUNCIO.VENDENDO && (
+                            <div className="relative flex items-center">
+                              <button 
+                                onClick={() => handleMarcarVendido(anuncio.id)}
+                                className="text-gray-400 hover:text-green-400 transition-colors group flex items-center"
+                              >
+                                <CheckCircleIcon className="h-5 w-5" />
+                                <span className="pointer-events-none absolute right-full mr-2 top-1/2 -translate-y-1/2 px-2 py-1 text-xs text-gray-100 bg-gray-900 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-[100]">
+                                  Marcar como Vendido
+                                </span>
+                              </button>
+                            </div>
+                          )}
+
+                          <div className="relative flex items-center">
+                            <button 
+                              onClick={() => setCancelModal({ isOpen: true, anuncioId: anuncio.id })}
+                              className="text-gray-400 hover:text-red-400 transition-colors group flex items-center"
+                            >
+                              <XCircleIcon className="h-5 w-5" />
+                              <span className="pointer-events-none absolute right-full mr-2 top-1/2 -translate-y-1/2 px-2 py-1 text-xs text-gray-100 bg-gray-900 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-[100]">
+                                Cancelar Anúncio
+                              </span>
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
                 </div>
-              </div>
+              ))}
             </div>
-          ))}
-        </div>
+          </>
+        )}
       </div>
 
       <ConfirmationModal

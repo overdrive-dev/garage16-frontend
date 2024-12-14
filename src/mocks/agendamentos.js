@@ -15,8 +15,9 @@ const createDate = (daysFromNow, time) => {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}T${time}:00Z`;
 };
 
-// Usuário mockado para testes
+// Usuários mockados para testes
 const CURRENT_USER = 'Ki0nY4yfm2apORlsm5WaMcWcNce2';
+const BUYER_USER = '2zxE5yZP1eON5Zckn04E84T4Ii22';
 
 export const agendamentos = [
   // Agendado (aguardando vendedor)
@@ -24,7 +25,7 @@ export const agendamentos = [
     id: 'agd-1',
     veiculoId: '1', // Kawasaki Z900
     vendedorId: CURRENT_USER,
-    compradorId: CURRENT_USER,
+    compradorId: BUYER_USER,
     data: createDate(2, '10:00'),
     horario: '10:00',
     status: STATUS_AGENDAMENTO.AGENDADO,
@@ -41,7 +42,7 @@ export const agendamentos = [
     id: 'agd-2',
     veiculoId: '2', // BMW S1000RR
     vendedorId: CURRENT_USER,
-    compradorId: CURRENT_USER,
+    compradorId: BUYER_USER,
     data: createDate(1, '14:00'),
     horario: '14:00',
     status: STATUS_AGENDAMENTO.CONFIRMADO,
@@ -58,7 +59,7 @@ export const agendamentos = [
     id: 'agd-3',
     veiculoId: '3',
     vendedorId: CURRENT_USER,
-    compradorId: CURRENT_USER,
+    compradorId: BUYER_USER,
     data: createDate(0, '15:00'), // Hoje
     horario: '15:00',
     status: STATUS_AGENDAMENTO.CHECKIN,
@@ -75,7 +76,7 @@ export const agendamentos = [
     id: 'agd-4',
     veiculoId: '4',
     vendedorId: CURRENT_USER,
-    compradorId: CURRENT_USER,
+    compradorId: BUYER_USER,
     data: createDate(0, '16:00'), // Hoje
     horario: '16:00',
     status: STATUS_AGENDAMENTO.CHECKIN,
@@ -92,7 +93,7 @@ export const agendamentos = [
     id: 'agd-5',
     veiculoId: '5',
     vendedorId: CURRENT_USER,
-    compradorId: CURRENT_USER,
+    compradorId: BUYER_USER,
     data: createDate(0, '17:00'), // Hoje
     horario: '17:00',
     status: STATUS_AGENDAMENTO.VISITA_CONFIRMADA,
@@ -109,7 +110,7 @@ export const agendamentos = [
     id: 'agd-6',
     veiculoId: '6',
     vendedorId: CURRENT_USER,
-    compradorId: CURRENT_USER,
+    compradorId: BUYER_USER,
     data: createDate(0, '11:00'), // Hoje, mais cedo
     horario: '11:00',
     status: STATUS_AGENDAMENTO.ANDAMENTO,
@@ -126,7 +127,7 @@ export const agendamentos = [
     id: 'agd-7',
     veiculoId: '7',
     vendedorId: CURRENT_USER,
-    compradorId: CURRENT_USER,
+    compradorId: BUYER_USER,
     data: createDate(-1, '14:00'),
     horario: '14:00',
     status: STATUS_AGENDAMENTO.CONCLUIDO,
@@ -143,7 +144,7 @@ export const agendamentos = [
     id: 'agd-8',
     veiculoId: '8',
     vendedorId: CURRENT_USER,
-    compradorId: CURRENT_USER,
+    compradorId: BUYER_USER,
     data: createDate(1, '09:00'),
     horario: '09:00',
     status: STATUS_AGENDAMENTO.CANCELADO,
@@ -161,7 +162,7 @@ export const agendamentos = [
     id: 'agd-9',
     veiculoId: '9',
     vendedorId: CURRENT_USER,
-    compradorId: CURRENT_USER,
+    compradorId: BUYER_USER,
     data: createDate(2, '15:00'),
     horario: '15:00',
     status: STATUS_AGENDAMENTO.CANCELADO,

@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { agendamentos, STATUS_AGENDAMENTO } from '@/mocks/agendamentos';
+import { agendamentos as mockAgendamentos, STATUS_AGENDAMENTO } from '@/mocks/agendamentos';
 import { mockAnuncios } from '@/mocks/anuncios';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -142,6 +142,7 @@ const MOTIVOS_DESMARCACAO = {
 
 export default function MeusAgendamentosPage() {
   const { user } = useAuth();
+  const [agendamentos, setAgendamentos] = useState(mockAgendamentos);
   
   // Debug logs
   console.log('Auth User:', user);
@@ -982,8 +983,22 @@ export default function MeusAgendamentosPage() {
           {/* Lista de Agendamentos */}
           <div className="bg-gray-800 rounded-lg overflow-hidden">
             {meusAgendamentos.length === 0 ? (
-              <div className="p-6 text-center text-gray-400">
-                Nenhum agendamento encontrado
+              <div className="p-8 text-center">
+                <div className="flex flex-col items-center justify-center space-y-4">
+                  <div className="bg-gray-700/50 rounded-full p-4">
+                    <ClockIcon className="h-8 w-8 text-gray-500" />
+                  </div>
+                  <div>
+                    <p className="text-gray-400 text-lg">Nenhum agendamento encontrado</p>
+                    <p className="text-gray-500 text-sm mt-1">Seus agendamentos aparecerão aqui quando você tiver visitas marcadas</p>
+                  </div>
+                  <Link
+                    href="/veiculos"
+                    className="mt-4 inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-orange-500 hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500"
+                  >
+                    Explorar Veículos
+                  </Link>
+                </div>
               </div>
             ) : (
               <div className="overflow-x-auto">
