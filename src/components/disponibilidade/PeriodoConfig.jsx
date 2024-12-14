@@ -41,9 +41,6 @@ export default function PeriodoConfig({ datas = {}, onChange, ultimoHorario = []
   };
 
   const handleDateSelect = (range) => {
-    console.log('handleDateSelect - range recebido:', range);
-    console.log('handleDateSelect - período atual:', selectedPeriod);
-    
     // Se não tiver range, apenas limpa a seleção
     if (!range) {
       setSelectedPeriod({ from: null, to: null });
@@ -62,12 +59,10 @@ export default function PeriodoConfig({ datas = {}, onChange, ultimoHorario = []
 
       // Pega apenas as datas disponíveis no período
       const datasDisponiveis = getDatasPeriodo(range.from, range.to);
-      console.log('Datas disponíveis no período:', datasDisponiveis);
       
       // Mesmo que não tenha datas disponíveis, mantém o range selecionado
       // mas não abre o modal
       if (datasDisponiveis.length === 0) {
-        console.log('Nenhuma data disponível no período');
         return;
       }
 
@@ -75,8 +70,15 @@ export default function PeriodoConfig({ datas = {}, onChange, ultimoHorario = []
       datasDisponiveis.sort((a, b) => a.getTime() - b.getTime());
       const primeiraDataDisponivel = datasDisponiveis[0];
       const dateStr = normalizeDateString(primeiraDataDisponivel);
-      
-      console.log('Primeira data disponível:', dateStr);
+
+      // Pega todos os horários disponíveis de todas as datas do range
+      const todosHorarios = new Set();
+      datasDisponiveis.forEach(date => {
+        const diaSemana = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sab'][date.getDay()];
+        const horariosDesteDia = storeSettings?.weekDays?.[diaSemana]?.slots || [];
+        horariosDesteDia.forEach(horario => todosHorarios.add(horario));
+      });
+      const horariosDisponiveis = Array.from(todosHorarios).sort();
       
       const periodo = {
         from: range.from,
@@ -100,7 +102,8 @@ export default function PeriodoConfig({ datas = {}, onChange, ultimoHorario = []
         horarios: datas[dateStr] || ultimoHorario,
         showReplicacao: false,
         periodo,
-        isNewRange: true
+        isNewRange: true,
+        horariosDisponiveis
       });
     }
   };
@@ -109,58 +112,82 @@ export default function PeriodoConfig({ datas = {}, onChange, ultimoHorario = []
     const novasDatas = { ...datas };
     const horariosArray = horarioData.horarios;
 
-    if (modalConfig.periodo?.from && modalConfig.periodo?.to) {
-      // Se é um novo range, sempre replica para todas as datas do período
-      if (modalConfig.isNewRange) {
-        // Pega apenas as datas disponíveis no período
-        const datasDisponiveis = getDatasPeriodo(modalConfig.periodo.from, modalConfig.periodo.to);
+    // Se não tem horários selecionados, remove a data
+    if (horariosArray.length === 0 && modalConfig.dateKey) {
+      delete novasDatas[modalConfig.dateKey];
+      setModalConfig({ 
+        isOpen: false, 
+        dateKey: null, 
+        horarios: [], 
+        showReplicacao: false, 
+        periodo: null,
+        isNewRange: false 
+      });
+      onChange(novasDatas);
+      return;
+    }
 
-        datasDisponiveis.forEach(date => {
-          const dateStr = normalizeDateString(date);
-          if (horariosArray.length > 0) {
-            novasDatas[dateStr] = [...horariosArray];
-          } else {
-            delete novasDatas[dateStr];
-          }
-        });
+    // Se é uma data única (clique direto no item)
+    if (modalConfig.dateKey && !modalConfig.isNewRange) {
+      const dataObj = new Date(modalConfig.dateKey);
+      const diaSemana = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sab'][dataObj.getDay()];
+      const horariosDisponiveis = storeSettings?.weekDays?.[diaSemana]?.slots || [];
+      
+      // Filtra apenas os horários que estão disponíveis para este dia
+      const horariosValidos = horariosArray.filter(h => horariosDisponiveis.includes(h));
+      
+      if (horariosValidos.length > 0) {
+        novasDatas[modalConfig.dateKey] = [...horariosValidos];
       } else {
-        // Se é edição de data específica
-        if (!horarioData.replicar) {
-          // Aplica apenas na data selecionada
-          if (horariosArray.length > 0) {
-            novasDatas[modalConfig.dateKey] = [...horariosArray];
-          } else {
-            delete novasDatas[modalConfig.dateKey];
-          }
-        } else if (horarioData.diasSemana) {
+        delete novasDatas[modalConfig.dateKey];
+      }
+
+      // Se tem replicação habilitada
+      if (horarioData.replicar) {
+        if (horarioData.diasSemana) {
           // Aplica nos dias da semana selecionados dentro do período
           const datasDisponiveis = getDatasPeriodo(modalConfig.periodo.from, modalConfig.periodo.to);
-
           datasDisponiveis.forEach(date => {
-            const diaSemana = format(date, 'EEEE', { locale: ptBR }).toLowerCase();
-            if (horarioData.diasSemana.includes(diaSemana)) {
+            const diaSemanaData = format(date, 'EEEE', { locale: ptBR }).toLowerCase();
+            if (horarioData.diasSemana.includes(diaSemanaData)) {
               const dateStr = normalizeDateString(date);
-              if (horariosArray.length > 0) {
-                novasDatas[dateStr] = [...horariosArray];
-              } else {
-                delete novasDatas[dateStr];
+              if (dateStr !== modalConfig.dateKey) { // Não aplica na data original
+                const horariosDispData = storeSettings?.weekDays?.[['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sab'][date.getDay()]]?.slots || [];
+                const horariosValidosData = horariosArray.filter(h => horariosDispData.includes(h));
+                if (horariosValidosData.length > 0) {
+                  novasDatas[dateStr] = [...horariosValidosData];
+                }
               }
             }
           });
         } else {
-          // Replica para todo o período (apenas datas disponíveis)
+          // Replica para todo o período
           const datasDisponiveis = getDatasPeriodo(modalConfig.periodo.from, modalConfig.periodo.to);
-
           datasDisponiveis.forEach(date => {
             const dateStr = normalizeDateString(date);
-            if (horariosArray.length > 0) {
-              novasDatas[dateStr] = [...horariosArray];
-            } else {
-              delete novasDatas[dateStr];
+            if (dateStr !== modalConfig.dateKey) { // Não aplica na data original
+              const diaSemanaData = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sab'][date.getDay()];
+              const horariosDispData = storeSettings?.weekDays?.[diaSemanaData]?.slots || [];
+              const horariosValidosData = horariosArray.filter(h => horariosDispData.includes(h));
+              if (horariosValidosData.length > 0) {
+                novasDatas[dateStr] = [...horariosValidosData];
+              }
             }
           });
         }
       }
+    } else if (modalConfig.isNewRange && modalConfig.periodo) {
+      // Se é um novo range, aplica para todas as datas disponíveis no período
+      const datasDisponiveis = getDatasPeriodo(modalConfig.periodo.from, modalConfig.periodo.to);
+      datasDisponiveis.forEach(date => {
+        const dateStr = normalizeDateString(date);
+        const diaSemana = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sab'][date.getDay()];
+        const horariosDisponiveis = storeSettings?.weekDays?.[diaSemana]?.slots || [];
+        const horariosValidos = horariosArray.filter(h => horariosDisponiveis.includes(h));
+        if (horariosValidos.length > 0) {
+          novasDatas[dateStr] = [...horariosValidos];
+        }
+      });
     }
 
     setModalConfig({ 
@@ -177,19 +204,29 @@ export default function PeriodoConfig({ datas = {}, onChange, ultimoHorario = []
 
   const handleItemClick = (data) => {
     const dateStr = normalizeDateString(data);
+    const diaSemana = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sab'][data.getDay()];
+    const horariosDisponiveis = storeSettings?.weekDays?.[diaSemana]?.slots || [];
+
+    console.log('[DEBUG] handleItemClick - Configuração do Modal:', {
+      dateStr,
+      diaSemana,
+      horariosDisponiveis,
+      horariosSelecionados: datas[dateStr] || ultimoHorario,
+      periodo: { from: data, to: data }
+    });
+
     setModalConfig({
       isOpen: true,
       dateKey: dateStr,
       horarios: datas[dateStr] || ultimoHorario,
       showReplicacao: true,
-      periodo: selectedPeriod,
-      isNewRange: false
+      periodo: { from: data, to: data },
+      isNewRange: false,
+      horariosDisponiveis: horariosDisponiveis
     });
   };
 
   const handleModalClose = () => {
-    console.log('handleModalClose - período atual:', selectedPeriod);
-    
     setModalConfig({ 
       isOpen: false, 
       dateKey: null, 
@@ -273,6 +310,8 @@ export default function PeriodoConfig({ datas = {}, onChange, ultimoHorario = []
         tipoConfiguracao="periodo"
         isNewRange={modalConfig.isNewRange}
         periodo={modalConfig.periodo}
+        horariosDisponiveis={modalConfig.horariosDisponiveis}
+        diaSemana={modalConfig.dateKey ? ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sab'][new Date(modalConfig.dateKey).getDay()] : null}
       />
     </div>
   );

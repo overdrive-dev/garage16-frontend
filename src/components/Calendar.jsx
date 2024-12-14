@@ -92,9 +92,16 @@ export default function Calendar({
     console.log('Calendar handleDateClick - selected:', selected);
     console.log('Calendar handleDateClick - mode:', mode);
 
+    // Normaliza a data para o fuso horário local
+    const localDate = new Date(
+      date.getFullYear(),
+      date.getMonth(),
+      date.getDate()
+    );
+
     if (weekView) {
-      if (!isDateDisabled(date)) {
-        onChange([date]);
+      if (!isDateDisabled(localDate)) {
+        onChange([localDate]);
       }
       return;
     }
@@ -102,38 +109,36 @@ export default function Calendar({
     switch (mode) {
       case 'range': {
         if (!selected?.from || (selected.from && selected.to)) {
-          // Para iniciar um novo range, não precisa mais verificar se a data está disponível
           console.log('Calendar handleDateClick - iniciando nova seleção');
           onChange({ 
-            from: date, 
+            from: localDate, 
             to: null 
           });
         } else {
           console.log('Calendar handleDateClick - completando range');
-          // Para completar o range, permite qualquer data final
           onChange({ 
             from: selected.from,
-            to: date
+            to: localDate
           });
         }
         break;
       }
       case 'multiple': {
-        if (!isDateDisabled(date)) {
+        if (!isDateDisabled(localDate)) {
           const currentSelected = Array.isArray(selected) ? selected : [];
-          const dateExists = currentSelected.some(d => isSameDay(d, date));
-          onChange(date);
+          const dateExists = currentSelected.some(d => isSameDay(d, localDate));
+          onChange(localDate);
         }
         break;
       }
       case 'single':
-        if (!isDateDisabled(date)) {
-          onChange(date);
+        if (!isDateDisabled(localDate)) {
+          onChange(localDate);
         }
         break;
       default:
-        if (!isDateDisabled(date)) {
-          onChange([date]);
+        if (!isDateDisabled(localDate)) {
+          onChange([localDate]);
         }
         break;
     }

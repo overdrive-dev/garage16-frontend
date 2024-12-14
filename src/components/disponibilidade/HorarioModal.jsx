@@ -22,6 +22,7 @@ export default function HorarioModal({
   const [horarios, setHorarios] = useState(selectedHorarios);
   const [replicarHorario, setReplicarHorario] = useState(false);
   const [tipoReplicacao, setTipoReplicacao] = useState('nenhuma');
+  const [hasChanges, setHasChanges] = useState(false);
   const [diasSemana, setDiasSemana] = useState({
     domingo: false,
     segunda: false,
@@ -40,6 +41,7 @@ export default function HorarioModal({
       }
       setReplicarHorario(false);
       setTipoReplicacao('nenhuma');
+      setHasChanges(false);
       setDiasSemana({
         domingo: false,
         segunda: false,
@@ -51,6 +53,18 @@ export default function HorarioModal({
       });
     }
   }, [isOpen, data]);
+
+  // Monitora mudanças nos horários
+  useEffect(() => {
+    const horariosChanged = JSON.stringify(horarios.sort()) !== JSON.stringify(selectedHorarios.sort());
+    console.log('[DEBUG] Verificando mudanças:', {
+      horarios,
+      selectedHorarios,
+      horariosChanged,
+      tipoConfiguracao
+    });
+    setHasChanges(horariosChanged);
+  }, [horarios, selectedHorarios]);
 
   // Verifica se um horário está disponível para o dia da semana
   const isHorarioDisponivel = (horario) => {
@@ -70,35 +84,33 @@ export default function HorarioModal({
     // Verifica se o horário está disponível antes de permitir a seleção
     if (!isHorarioDisponivel(horario)) return;
 
-    setHorarios(
-      horarios.includes(horario)
-        ? horarios.filter(h => h !== horario)
-        : [...horarios, horario].sort()
-    );
+    const novosHorarios = horarios.includes(horario)
+      ? horarios.filter(h => h !== horario)
+      : [...horarios, horario].sort();
+
+    console.log('[DEBUG] toggleHorario:', {
+      horario,
+      horarioAnterior: horarios,
+      novosHorarios,
+      tipoConfiguracao
+    });
+
+    setHorarios(novosHorarios);
   };
 
   const handleConfirm = () => {
-    // Filtra apenas os horários que estão disponíveis na loja
-    const horariosPermitidos = horarios.filter(horario => isHorarioDisponivel(horario));
+    console.log('[DEBUG] handleConfirm - Modal:', {
+      horarios,
+      replicarHorario,
+      tipoConfiguracao
+    });
 
-    // Se é configuração de período com edição individual
-    if (tipoConfiguracao === 'periodo' && !isNewRange) {
-      onConfirm({
-        horarios: horariosPermitidos,
-        replicar: tipoReplicacao !== 'nenhuma',
-        diasSemana: tipoReplicacao === 'diasSemana' ? 
-          Object.entries(diasSemana)
-            .filter(([_, selected]) => selected)
-            .map(([dia]) => dia) : 
-          null
-      });
-    } else {
-      // Para data única e semanal, mantém o comportamento original
-      onConfirm({
-        horarios: horariosPermitidos,
-        replicar: replicarHorario
-      });
-    }
+    onConfirm({
+      horarios,
+      replicar: replicarHorario,
+      tipoConfiguracao
+    });
+    onClose();
   };
 
   const handleDesmarcar = () => {
@@ -195,7 +207,15 @@ export default function HorarioModal({
     }
     
     if (!isValidDate(data)) return '';
-    return format(normalizeDate(data), "EEEE, dd 'de' MMMM", { locale: ptBR });
+
+    // Garante que a data está no fuso horário local
+    const localDate = new Date(
+      data.getFullYear(),
+      data.getMonth(),
+      data.getDate()
+    );
+    
+    return format(localDate, "EEEE, dd 'de' MMMM", { locale: ptBR });
   };
 
   return (
@@ -264,19 +284,21 @@ export default function HorarioModal({
             )}
 
             {/* Lado direito - Botões de ação */}
-            <div className={`flex gap-3 ${!isNewRange && selectedHorarios.length > 0 ? '' : 'ml-auto'}`}>
+            <div className="flex gap-3 ml-auto">
               <button
                 onClick={onClose}
                 className="px-4 py-2 rounded-md bg-gray-700 text-gray-300 hover:bg-gray-600 transition-colors"
               >
                 Cancelar
               </button>
-              <button
-                onClick={handleConfirm}
-                className="px-4 py-2 rounded-md bg-orange-500 text-white hover:bg-orange-600 transition-colors"
-              >
-                Confirmar
-              </button>
+              {(tipoConfiguracao === 'unica' || hasChanges || isNewRange) && (
+                <button
+                  onClick={handleConfirm}
+                  className="px-4 py-2 rounded-md bg-orange-500 text-white hover:bg-orange-600 transition-colors"
+                >
+                  Confirmar
+                </button>
+              )}
             </div>
           </div>
         </Dialog.Panel>

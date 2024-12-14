@@ -9,6 +9,10 @@ import { useDisponibilidade } from '@/contexts/DisponibilidadeContext';
 
 export default function DataUnicaConfig({ datas = {}, onChange, ultimoHorario = [] }) {
   const { availableSlots } = useDisponibilidade();
+  
+  // Garantir que estamos trabalhando com o objeto correto de horários
+  const horariosConfig = datas?.horarios || {};
+
   const [modalConfig, setModalConfig] = useState({
     isOpen: false,
     dateKey: null,
@@ -30,17 +34,6 @@ export default function DataUnicaConfig({ datas = {}, onChange, ultimoHorario = 
       // Normaliza a data para o formato YYYY-MM-DD
       const dateStr = normalizeDateString(date);
       
-      // Debug para sábados
-      if (date.getDay() === 6) { // 6 = Sábado
-        console.log('Debug Sábado:', {
-          data: date,
-          dateStr,
-          disponivel: !!availableSlots[dateStr],
-          slots: availableSlots[dateStr]?.slots,
-          todosSlots: availableSlots
-        });
-      }
-      
       // Verifica se a data está nos slots disponíveis
       return !availableSlots[dateStr];
     };
@@ -59,7 +52,7 @@ export default function DataUnicaConfig({ datas = {}, onChange, ultimoHorario = 
   };
 
   const verificarReplicacao = (dataAtual) => {
-    const datasConfiguradas = Object.entries(datas || {})
+    const datasConfiguradas = Object.entries(horariosConfig)
       .filter(([data, horarios]) => data !== dataAtual && horarios && horarios.length > 0)
       .map(([data]) => data);
 
@@ -67,7 +60,7 @@ export default function DataUnicaConfig({ datas = {}, onChange, ultimoHorario = 
   };
 
   const handleListClick = (dateStr) => {
-    const horarios = datas?.[dateStr] || [];
+    const horarios = horariosConfig?.[dateStr] || [];
     const showReplicacao = verificarReplicacao(dateStr);
 
     setModalConfig({
@@ -87,6 +80,12 @@ export default function DataUnicaConfig({ datas = {}, onChange, ultimoHorario = 
     const lastDate = datesArray[datesArray.length - 1];
     const dateStr = normalizeDateString(lastDate);
 
+    console.log('[DEBUG] handleCalendarSelect - Datas:', {
+      lastDate,
+      dateStr,
+      lastDateISO: lastDate.toISOString()
+    });
+
     // Verifica se a data está disponível
     if (!availableSlots?.[dateStr]) {
       console.log('Data não disponível:', dateStr);
@@ -96,38 +95,66 @@ export default function DataUnicaConfig({ datas = {}, onChange, ultimoHorario = 
     setModalConfig({
       isOpen: true,
       dateKey: dateStr,
-      horarios: datas[dateStr] || ultimoHorario,
+      horarios: horariosConfig[dateStr] || ultimoHorario,
       showReplicacao: verificarReplicacao(dateStr)
     });
   };
 
   const handleHorarioConfirm = (horarioData) => {
+    console.log('[DEBUG] handleHorarioConfirm:', {
+      modalConfig,
+      horarioData
+    });
+
     if (modalConfig.dateKey) {
       const { horarios: horariosNovos, replicar } = horarioData;
-      const novasDatas = { ...datas };
+      const novasHorarios = { ...horariosConfig };
 
       // Verifica se os horários selecionados estão disponíveis
       const horariosDisponiveis = getHorariosDisponiveis(modalConfig.dateKey);
       const horariosValidos = horariosNovos.filter(h => horariosDisponiveis.includes(h));
 
+      // Se não tiver horários válidos, remove a data
       if (!horariosValidos.length) {
-        // Se não tiver horários válidos, remove a data
-        delete novasDatas[modalConfig.dateKey];
+        delete novasHorarios[modalConfig.dateKey];
       } else {
-        // Adiciona os horários válidos
-        novasDatas[modalConfig.dateKey] = horariosValidos;
+        // Garante que a data está no formato correto (YYYY-MM-DD)
+        const dateKey = modalConfig.dateKey;
+        if (dateKey) {
+          // Adiciona os horários válidos
+          novasHorarios[dateKey] = horariosValidos;
+        }
       }
 
-      onChange(novasDatas);
+      // Se tem replicação habilitada
+      if (replicar) {
+        Object.keys(horariosConfig).forEach(data => {
+          try {
+            const dateStr = normalizeDateString(new Date(data));
+            if (dateStr && dateStr !== modalConfig.dateKey) {
+              const horariosDisponiveisData = getHorariosDisponiveis(dateStr);
+              const horariosValidosData = horariosNovos.filter(h => horariosDisponiveisData.includes(h));
+              if (horariosValidosData.length > 0) {
+                novasHorarios[dateStr] = horariosValidosData;
+              }
+            }
+          } catch (error) {
+            console.error('[DEBUG] Erro ao processar data para replicação:', { data, error });
+          }
+        });
+      }
+
+      console.log('[DEBUG] Nova configuração de horários:', novasHorarios);
+      onChange(novasHorarios);
     }
-    setModalConfig({ isOpen: false, dateKey: null, horarios: [] });
+    setModalConfig({ isOpen: false, dateKey: null, horarios: [], showReplicacao: false });
   };
 
   const handleModalClose = () => {
     setModalConfig({ isOpen: false, dateKey: null, horarios: [] });
   };
 
-  const selectedDates = Object.keys(datas || {}).map(dateStr => 
+  const selectedDates = Object.keys(horariosConfig).map(dateStr => 
     normalizeDate(dateStr)
   );
 
@@ -148,31 +175,47 @@ export default function DataUnicaConfig({ datas = {}, onChange, ultimoHorario = 
       </div>
 
       <div className="space-y-2">
-        {Object.entries(datas || {}).map(([data, horarios]) => (
-          <div 
-            key={data} 
-            className="flex items-center justify-between bg-gray-800 p-3 rounded-lg hover:bg-gray-700/50 transition-colors cursor-pointer"
-            onClick={() => handleListClick(data)}
-          >
-            <div>
-              <div className="text-gray-200">
-                {format(normalizeDate(data), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+        {Object.entries(horariosConfig).map(([data, horarios]) => {
+          try {
+            // Tenta criar uma data válida
+            const dataObj = new Date(data);
+            
+            // Verifica se a data é válida
+            if (isNaN(dataObj.getTime())) {
+              console.log('[DEBUG] Data inválida:', data);
+              return null;
+            }
+
+            return (
+              <div 
+                key={data} 
+                className="flex items-center justify-between bg-gray-800 p-3 rounded-lg hover:bg-gray-700/50 transition-colors cursor-pointer"
+                onClick={() => handleListClick(data)}
+              >
+                <div>
+                  <div className="text-gray-200">
+                    {format(dataObj, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+                  </div>
+                  <div className="text-sm text-gray-400">
+                    {horarios.join(', ')}
+                  </div>
+                </div>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleListClick(data);
+                  }}
+                  className="p-2 text-gray-400 hover:text-gray-300 transition-colors"
+                >
+                  <TrashIcon className="w-5 h-5" />
+                </button>
               </div>
-              <div className="text-sm text-gray-400">
-                {horarios.join(', ')}
-              </div>
-            </div>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                handleListClick(data);
-              }}
-              className="p-2 text-gray-400 hover:text-gray-300 transition-colors"
-            >
-              <TrashIcon className="w-5 h-5" />
-            </button>
-          </div>
-        ))}
+            );
+          } catch (error) {
+            console.error('[DEBUG] Erro ao processar data:', { data, error });
+            return null;
+          }
+        })}
       </div>
 
       {modalConfig.isOpen && (
@@ -180,11 +223,14 @@ export default function DataUnicaConfig({ datas = {}, onChange, ultimoHorario = 
           isOpen={modalConfig.isOpen}
           onClose={handleModalClose}
           onConfirm={handleHorarioConfirm}
-          data={new Date(modalConfig.dateKey)}
+          data={modalConfig.dateKey ? new Date(modalConfig.dateKey) : null}
           selectedHorarios={modalConfig.horarios}
           showReplicacao={modalConfig.showReplicacao}
-          tipoConfiguracao="unica"
+          tipoConfiguracao="dataUnica"
           horariosDisponiveis={getHorariosDisponiveis(modalConfig.dateKey)}
+          diaSemana={modalConfig.dateKey ? ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sab'][new Date(modalConfig.dateKey).getDay()] : null}
+          isNewRange={false}
+          periodo={null}
         />
       )}
     </div>

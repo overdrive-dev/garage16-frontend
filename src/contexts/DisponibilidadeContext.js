@@ -5,6 +5,13 @@ import { useAuth } from './AuthContext';
 import { availabilityService } from '@/services/availabilityService';
 import { toast } from '@/components/ui/toast';
 
+// Função auxiliar para comparar arrays
+const arraysIguais = (arr1, arr2) => {
+  if (!Array.isArray(arr1) || !Array.isArray(arr2)) return false;
+  if (arr1.length !== arr2.length) return false;
+  return arr1.every((item, index) => item === arr2[index]);
+};
+
 const DisponibilidadeContext = createContext({});
 
 const disponibilidadePadrao = {
@@ -31,6 +38,7 @@ const disponibilidadePadrao = {
 // Função para criar disponibilidade padrão baseada nas configurações da loja
 const createDefaultAvailability = (storeSettings) => {
   const defaultData = { ...disponibilidadePadrao };
+  defaultData.tipo = 'semanal'; // Garante que o tipo seja sempre definido
   
   // Aplica as configurações da loja
   if (storeSettings?.weekDays) {
@@ -51,7 +59,7 @@ const convertToFirebase = (frontendData) => {
 
   const firebaseData = {
     availableDays: {
-      type: frontendData.tipo,
+      type: frontendData.tipo,  // Não precisa mais normalizar o tipo
       config: {
         weekDays: {
           dom: { active: false, slots: [] },
@@ -119,7 +127,7 @@ const convertFromFirebase = (firebaseData, storeSettings) => {
   if (!firebaseData?.availableDays) return createDefaultAvailability(storeSettings);
 
   const frontendData = {
-    tipo: firebaseData.availableDays.type,
+    tipo: firebaseData.availableDays.type || 'semanal',
     dataUnica: {
       horarios: {}
     },
@@ -273,8 +281,17 @@ export function DisponibilidadeProvider({ children }) {
       // Se não houver disponibilidade salva, compara com o padrão
       const disponibilidadeAtual = disponibilidade || disponibilidadePadrao;
 
+      console.log('[DEBUG] Verificando mudanças:', {
+        tipo: currentConfig.tipo,
+        tipoAtual: disponibilidadeAtual.tipo,
+        currentConfig,
+        disponibilidadeAtual
+      });
+
       // Se mudou o tipo, verifica se tem horários configurados no novo tipo
-      if (currentConfig.tipo !== disponibilidadeAtual.tipo) {
+      if (currentConfig.tipo !== disponibilidadeAtual.tipo && 
+          !(currentConfig.tipo === 'dataUnica' && disponibilidadeAtual.tipo === 'unica') &&
+          !(currentConfig.tipo === 'unica' && disponibilidadeAtual.tipo === 'dataUnica')) {
         let temHorarios = false;
 
         if (currentConfig.tipo === 'semanal') {
@@ -282,10 +299,15 @@ export function DisponibilidadeProvider({ children }) {
             dia.ativo && dia.horarios.length > 0
           );
         }
-        else if (currentConfig.tipo === 'dataUnica') {
-          temHorarios = Object.values(currentConfig.dataUnica.horarios || {}).some(horarios => 
-            horarios && horarios.length > 0
+        else if (currentConfig.tipo === 'dataUnica' || currentConfig.tipo === 'unica') {
+          const horarios = currentConfig.dataUnica.horarios || {};
+          temHorarios = Object.values(horarios).some(slots => 
+            Array.isArray(slots) && slots.length > 0
           );
+          console.log('[DEBUG] Verificando horários em dataUnica:', {
+            horarios,
+            temHorarios
+          });
         }
         else if (currentConfig.tipo === 'faixaHorario') {
           temHorarios = Object.values(currentConfig.faixaHorario.horarios || {}).some(horarios => 
@@ -293,40 +315,77 @@ export function DisponibilidadeProvider({ children }) {
           );
         }
 
+        console.log('[DEBUG] Mudou tipo:', {
+          de: disponibilidadeAtual.tipo,
+          para: currentConfig.tipo,
+          temHorarios
+        });
+
         return temHorarios;
       }
 
       // Se o tipo é o mesmo, compara os horários
-      if (currentConfig.tipo === disponibilidadeAtual.tipo) {
-        if (currentConfig.tipo === 'dataUnica') {
-          // Converte os objetos para strings para comparação
-          const horariosAtuaisStr = JSON.stringify(disponibilidadeAtual.dataUnica.horarios || {});
-          const horariosNovosStr = JSON.stringify(currentConfig.dataUnica.horarios || {});
-          return horariosAtuaisStr !== horariosNovosStr;
+      if (currentConfig.tipo === disponibilidadeAtual.tipo || 
+          (currentConfig.tipo === 'dataUnica' && disponibilidadeAtual.tipo === 'unica') ||
+          (currentConfig.tipo === 'unica' && disponibilidadeAtual.tipo === 'dataUnica')) {
+        
+        // Normaliza os tipos para comparação
+        const tipoAtual = disponibilidadeAtual.tipo === 'unica' ? 'dataUnica' : disponibilidadeAtual.tipo;
+        const tipoNovo = currentConfig.tipo === 'unica' ? 'dataUnica' : currentConfig.tipo;
+
+        if (tipoNovo === 'semanal') {
+          // Compara cada dia da semana
+          return Object.entries(currentConfig.semanal).some(([dia, config]) => {
+            const configAtual = disponibilidadeAtual.semanal[dia];
+            return (
+              config.ativo !== configAtual.ativo ||
+              !arraysIguais(config.horarios, configAtual.horarios)
+            );
+          });
         }
-        else if (currentConfig.tipo === 'semanal') {
-          // Converte os objetos para strings para comparação
-          const horariosAtuaisStr = JSON.stringify(disponibilidadeAtual.semanal);
-          const horariosNovosStr = JSON.stringify(currentConfig.semanal);
-          return horariosAtuaisStr !== horariosNovosStr;
-        }
-        else if (currentConfig.tipo === 'faixaHorario') {
-          // Compara datas de início e fim
-          if (currentConfig.faixaHorario.dataInicio !== disponibilidadeAtual.faixaHorario.dataInicio ||
-              currentConfig.faixaHorario.dataFim !== disponibilidadeAtual.faixaHorario.dataFim) {
+        else if (tipoNovo === 'dataUnica') {
+          // Compara os horários de cada data
+          const horariosAtuais = disponibilidadeAtual.dataUnica.horarios || {};
+          const horariosNovos = currentConfig.dataUnica.horarios || {};
+          
+          console.log('[DEBUG] Comparando horários em dataUnica:', {
+            horariosAtuais,
+            horariosNovos
+          });
+
+          // Se tem horários diferentes
+          if (Object.keys(horariosAtuais).length !== Object.keys(horariosNovos).length) {
             return true;
           }
 
-          // Converte os objetos para strings para comparação
-          const horariosAtuaisStr = JSON.stringify(disponibilidadeAtual.faixaHorario.horarios || {});
-          const horariosNovosStr = JSON.stringify(currentConfig.faixaHorario.horarios || {});
-          return horariosAtuaisStr !== horariosNovosStr;
+          // Compara cada data
+          return Object.keys(horariosNovos).some(data => {
+            const horariosData = horariosNovos[data] || [];
+            const horariosAntigos = horariosAtuais[data] || [];
+            return !arraysIguais(horariosData, horariosAntigos);
+          });
+        }
+        else if (tipoNovo === 'faixaHorario') {
+          // Compara os horários de cada data no período
+          const datasAtuais = Object.keys(disponibilidadeAtual.faixaHorario.horarios || {});
+          const datasNovas = Object.keys(currentConfig.faixaHorario.horarios || {});
+
+          // Se tem datas diferentes
+          if (datasAtuais.length !== datasNovas.length) return true;
+
+          // Compara os horários de cada data
+          return datasNovas.some(data => {
+            const horariosAtuais = disponibilidadeAtual.faixaHorario.horarios[data] || [];
+            const horariosNovos = currentConfig.faixaHorario.horarios[data] || [];
+            return !arraysIguais(horariosAtuais, horariosNovos);
+          });
         }
       }
 
       return false;
     })();
 
+    console.log('[DEBUG] Resultado final hasChanges:', hasRealChanges);
     setHasChanges(hasRealChanges);
   }, [disponibilidade, currentConfig]);
 
@@ -349,7 +408,7 @@ export function DisponibilidadeProvider({ children }) {
     const fetchDisponibilidade = async () => {
       try {
         if (user) {
-          console.log('fetchDisponibilidade - Iniciando carregamento para usuário:', user.uid);
+          console.log('fetchDisponibilidade - Iniciando carregamento para usu��rio:', user.uid);
           const data = await availabilityService.getUserAvailability(user.uid);
           console.log('fetchDisponibilidade - Dados recebidos do Firebase:', data);
           
@@ -373,10 +432,27 @@ export function DisponibilidadeProvider({ children }) {
   }, [user, storeSettings]); // Adiciona storeSettings como dependência
 
   const updateCurrentConfig = (updates) => {
-    setCurrentConfig(typeof updates === 'function' 
-      ? updates(currentConfig) 
-      : { ...currentConfig, ...updates }
-    );
+    console.log('[DEBUG] updateCurrentConfig:', {
+      currentConfig,
+      updates: typeof updates === 'function' ? updates(currentConfig) : updates
+    });
+
+    setCurrentConfig(prev => {
+      // Se for uma função, executa ela
+      const updatedConfig = typeof updates === 'function' ? updates(prev) : updates;
+      
+      // Normaliza o tipo para 'dataUnica' se for 'unica'
+      const tipo = updatedConfig.tipo === 'unica' ? 'dataUnica' : (updatedConfig.tipo || prev.tipo);
+      
+      const newConfig = {
+        ...prev,
+        ...updatedConfig,
+        tipo
+      };
+
+      console.log('[DEBUG] Novo currentConfig:', newConfig);
+      return newConfig;
+    });
   };
 
   const updateDisponibilidade = async (novaDisponibilidade) => {

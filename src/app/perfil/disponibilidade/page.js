@@ -9,7 +9,7 @@ import SemanalConfig from '@/components/disponibilidade/SemanalConfig';
 import PeriodoConfig from '@/components/disponibilidade/PeriodoConfig';
 
 const estadoInicial = {
-  tipo: 'unica',
+  tipo: 'dataUnica',
   dataUnica: {
     horarios: {}
   },
@@ -153,9 +153,9 @@ export default function DisponibilidadePage() {
             <div className="grid grid-cols-3 gap-4">
               <button
                 type="button"
-                onClick={() => handleTipoChange('unica')}
+                onClick={() => handleTipoChange('dataUnica')}
                 className={`relative p-4 rounded-lg border-2 transition-colors
-                  ${currentConfig.tipo === 'unica' 
+                  ${currentConfig.tipo === 'dataUnica' 
                     ? 'border-orange-500 bg-orange-500/10' 
                     : 'border-gray-700 hover:border-gray-600'}`}
               >
@@ -163,7 +163,7 @@ export default function DisponibilidadePage() {
                   <span className="block font-medium text-gray-200">Data Única</span>
                   <span className="text-sm text-gray-400">Sem repetição</span>
                 </div>
-                {temHorariosAtivos('unica') && (
+                {temHorariosAtivos('dataUnica') && (
                   <span className="absolute -top-2 -right-2 bg-orange-500 text-white text-xs px-2 py-1 rounded-full">
                     Ativo
                   </span>
@@ -211,16 +211,17 @@ export default function DisponibilidadePage() {
 
             {/* Conteúdo baseado no tipo selecionado */}
             <div className="bg-gray-800/50 rounded-lg p-6 border border-gray-700">
-              {currentConfig.tipo === 'unica' && (
+              {currentConfig.tipo === 'dataUnica' && (
                 <DataUnicaConfig 
-                  datas={currentConfig.dataUnica?.horarios || {}}
+                  datas={currentConfig.dataUnica.horarios}
                   ultimoHorario={currentConfig.dataUnica?.ultimoHorario || []}
-                  onChange={(updates) => {
+                  onChange={(novasHorarios) => {
+                    console.log('[DEBUG] Atualizando horários de data única:', novasHorarios);
                     updateCurrentConfig(prev => ({
                       ...prev,
                       dataUnica: {
                         ...prev.dataUnica,
-                        horarios: updates
+                        horarios: novasHorarios
                       }
                     }));
                   }}
