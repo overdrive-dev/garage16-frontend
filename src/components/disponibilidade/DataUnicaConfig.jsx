@@ -178,7 +178,13 @@ export default function DataUnicaConfig({ datas = {}, onChange, ultimoHorario = 
     setModalConfig({ isOpen: false, dateKey: null, horarios: [] });
   };
 
-  const selectedDates = Object.keys(horariosConfig).map(dateStr => normalizeDate(dateStr));
+  // Memoriza as datas selecionadas
+  const selectedDates = useMemo(() => {
+    if (!datas?.horarios) return [];
+    return Object.keys(datas.horarios)
+      .map(dateStr => normalizeDate(dateStr))
+      .filter(Boolean);
+  }, [datas?.horarios]);
 
   // Função para formatar os horários de forma padronizada
   const formatHorarios = (horarios) => {
@@ -196,7 +202,7 @@ export default function DataUnicaConfig({ datas = {}, onChange, ultimoHorario = 
     <div className="space-y-6">
       <div className="bg-gray-800 rounded-lg p-4">
         <Calendar
-          mode="single"
+          mode="multiple"
           selected={selectedDates}
           onChange={handleCalendarSelect}
           minDate={normalizeDate(new Date())}

@@ -88,7 +88,7 @@ export default function Calendar({
   };
 
   const handleDateClick = (date) => {
-    // Normaliza a data para o fuso horário local
+    // Normaliza a data para o fuso hor��rio local
     const localDate = normalizeDate(date);
 
     if (weekView) {
@@ -300,3 +300,35 @@ const colStartClasses = [
   'col-start-5',
   'col-start-6',
 ]; 
+
+export function CalendarSkeleton() {
+  return (
+    <div className="select-none animate-pulse">
+      <div className="flex items-center justify-between mb-4">
+        <div className="h-6 w-32 bg-gray-700 rounded"></div>
+        <div className="flex items-center space-x-2">
+          <div className="h-8 w-8 bg-gray-700 rounded"></div>
+          <div className="h-8 w-8 bg-gray-700 rounded"></div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-7 text-center text-xs leading-6 text-gray-400 mb-2">
+        <div>Seg</div>
+        <div>Ter</div>
+        <div>Qua</div>
+        <div>Qui</div>
+        <div>Sex</div>
+        <div>Sáb</div>
+        <div>Dom</div>
+      </div>
+
+      <div className="grid grid-cols-7 text-sm gap-px bg-gray-700/50 rounded-lg overflow-hidden">
+        {Array.from({ length: 35 }).map((_, i) => (
+          <div key={i} className="relative py-3 bg-gray-800">
+            <div className="mx-auto h-7 w-7 rounded-full bg-gray-700"></div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+} 

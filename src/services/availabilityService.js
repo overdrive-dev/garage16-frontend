@@ -14,14 +14,21 @@ const STORE_SETTINGS_COLLECTION = 'store_settings';
 export const availabilityService = {
   // Busca a disponibilidade de um usuário
   async getUserAvailability(userId) {
+    console.log('[getUserAvailability] Buscando disponibilidade para userId:', userId);
+    
     try {
       const docRef = doc(db, USER_AVAILABILITY_COLLECTION, userId);
       const docSnap = await getDoc(docRef);
       
+      console.log('[getUserAvailability] Documento encontrado:', docSnap.exists());
+      
       if (docSnap.exists()) {
-        return docSnap.data();
+        const data = docSnap.data();
+        console.log('[getUserAvailability] Dados encontrados:', data);
+        return data;
       }
       
+      console.log('[getUserAvailability] Nenhum dado encontrado, retornando estrutura padrão');
       // Se não existir, retorna estrutura padrão
       return {
         userId,
@@ -32,7 +39,7 @@ export const availabilityService = {
         }
       };
     } catch (error) {
-      console.error('Erro ao buscar disponibilidade:', error);
+      console.error('[getUserAvailability] Erro:', error);
       throw error;
     }
   },

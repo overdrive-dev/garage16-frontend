@@ -1,0 +1,85 @@
+{
+  "Ki0nY4yfm2apORlsm5WaMcWcNce2": {
+    "userId": "Ki0nY4yfm2apORlsm5WaMcWcNce2",
+    "metadata": {
+      "createdAt": {
+        "_seconds": 1734171317,
+        "_nanoseconds": 240000000
+      },
+      "lastUpdate": {
+        "_seconds": 1734171317,
+        "_nanoseconds": 240000000
+      }
+    },
+    "availableDays": {
+      "metadata": {
+        "lastUpdate": "2024-12-14T10:15:16.748Z"
+      },
+      "availableDays": {
+        "type": "faixaHorario",
+        "config": {
+          "weekDays": {
+            "ter": {
+              "slots": [],
+              "active": false
+            },
+            "dom": {
+              "slots": [],
+              "active": false
+            },
+            "seg": {
+              "slots": [],
+              "active": false
+            },
+            "sab": {
+              "slots": [],
+              "active": false
+            },
+            "qua": {
+              "slots": [],
+              "active": false
+            },
+            "sex": {
+              "slots": [],
+              "active": false
+            },
+            "qui": {
+              "slots": [],
+              "active": false
+            }
+          },
+          "range": {
+            "start": "2024-12-14",
+            "end": "2024-12-21"
+          },
+          "dates": {
+            "2024-12-21": [
+              "10:00"
+            ],
+            "2024-12-20": [
+              "10:00"
+            ],
+            "2024-12-19": [
+              "10:00"
+            ],
+            "2024-12-18": [
+              "10:00"
+            ],
+            "2024-12-26": [
+              "10:00"
+            ],
+            "2024-12-25": [
+              "10:00"
+            ],
+            "2024-12-24": [
+              "10:00"
+            ],
+            "2024-12-23": [
+              "10:00"
+            ]
+          }
+        }
+      }
+    }
+  }
+}

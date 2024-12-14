@@ -54,11 +54,14 @@ export default function SemanalConfig({ horarios, onChange, datasDisponiveis = [
 
   // Verifica se um dia da semana está ativo
   const isDiaSemanaAtivo = (diaSemana) => {
-    return isDiaDisponivelNaLoja(diaSemana) && horarios[diaSemana]?.ativo && horarios[diaSemana].horarios.length > 0;
+    const diaConfig = horarios[diaSemana];
+    return isDiaDisponivelNaLoja(diaSemana) && diaConfig?.ativo && Array.isArray(diaConfig?.horarios) && diaConfig.horarios.length > 0;
   };
 
   // Converte os dias ativos em datas para o calendário
   const getDiasAtivos = () => {
+    if (!horarios) return [];
+
     const hoje = normalizeDate(new Date());
     const todasDatasDoMes = eachDayOfInterval({
       start: hoje,
@@ -73,7 +76,7 @@ export default function SemanalConfig({ horarios, onChange, datasDisponiveis = [
     });
   };
 
-  const diasAtivos = useMemo(() => getDiasAtivos(), [horarios, datasDisponiveis, storeSettings]);
+  const diasAtivos = useMemo(() => getDiasAtivos(), [horarios, storeSettings]);
 
   const handleCalendarSelect = (dates) => {
     if (!dates || !dates.length) return;
@@ -302,34 +305,36 @@ export default function SemanalConfig({ horarios, onChange, datasDisponiveis = [
 
       {/* Lista de dias */}
       <div className="space-y-4">
-        {diasDaSemana.map(({ key, label }) => {
-          const config = horarios[key] || { ativo: false, horarios: [] };
-          const isDisabled = !isDiaDisponivelNaLoja(key);
-          const isHovered = hoveredWeekday === key;
+        {diasDaSemana.map(({ key: dia, label }) => {
+          const config = horarios[dia] || { ativo: false, horarios: [] };
+          const isDisabled = !isDiaDisponivelNaLoja(dia);
+          const isHovered = hoveredWeekday === dia;
+          const isAtivo = isDiaSemanaAtivo(dia);
 
           return (
             <div
-              key={key}
+              key={dia}
               className={`
                 bg-gray-800 rounded-lg p-4 transition-all duration-200
                 ${isDisabled ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-700/50 cursor-pointer'}
                 ${isHovered ? 'ring-2 ring-orange-500/50' : ''}
+                ${isAtivo ? 'border border-orange-500/50' : ''}
               `}
-              onClick={() => !isDisabled && handleOpenModal(key)}
-              onMouseEnter={() => setHoveredWeekday(key)}
+              onClick={() => !isDisabled && handleOpenModal(dia)}
+              onMouseEnter={() => setHoveredWeekday(dia)}
               onMouseLeave={() => setHoveredWeekday(null)}
             >
               <div className="flex items-center justify-between">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center space-x-2">
                     <span className="text-gray-200 font-medium">{label}</span>
-                    {config.ativo && (
+                    {isAtivo && (
                       <span className="bg-orange-500/20 text-orange-400 text-xs px-2 py-0.5 rounded-full">
-                        Ativo
+                        {config.horarios.length} horário{config.horarios.length !== 1 ? 's' : ''}
                       </span>
                     )}
                   </div>
-                  {config.ativo && config.horarios.length > 0 && (
+                  {isAtivo && (
                     <div className="text-sm mt-1 truncate">
                       {formatHorarios(config.horarios)}
                     </div>
@@ -339,21 +344,21 @@ export default function SemanalConfig({ horarios, onChange, datasDisponiveis = [
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      if (config.ativo) {
+                      if (isAtivo) {
                         onChange({
                           ...horarios,
-                          [key]: {
+                          [dia]: {
                             ativo: false,
                             horarios: []
                           }
                         });
                       } else {
-                        handleOpenModal(key);
+                        handleOpenModal(dia);
                       }
                     }}
                     className="p-2 text-gray-400 hover:text-gray-300 transition-colors"
                   >
-                    {config.ativo ? (
+                    {isAtivo ? (
                       <TrashIcon className="w-5 h-5 hover:text-red-400" />
                     ) : (
                       <PlusIcon className="w-5 h-5" />
@@ -371,7 +376,7 @@ export default function SemanalConfig({ horarios, onChange, datasDisponiveis = [
         isOpen={modalConfig.isOpen}
         onClose={handleModalClose}
         onConfirm={handleHorarioConfirm}
-        horariosSelecionados={modalConfig.horarios}
+        selectedHorarios={modalConfig.horarios}
         showReplicacao={modalConfig.showReplicacao}
         isLoading={isLoading}
         diaSemana={modalConfig.diaSemana}

@@ -9,7 +9,7 @@ import SemanalConfig from '@/components/disponibilidade/SemanalConfig';
 import PeriodoConfig from '@/components/disponibilidade/PeriodoConfig';
 
 const estadoInicial = {
-  tipo: 'dataUnica',
+  tipo: null,
   dataUnica: {
     horarios: {}
   },
@@ -242,15 +242,11 @@ export default function DisponibilidadePage() {
 
               {currentConfig.tipo === 'faixaHorario' && (
                 <PeriodoConfig 
-                  datas={currentConfig.faixaHorario?.horarios || {}}
-                  ultimoHorario={currentConfig.faixaHorario?.ultimoHorario || []}
+                  periodo={currentConfig.faixaHorario}
                   onChange={(updates) => {
                     updateCurrentConfig(prev => ({
                       ...prev,
-                      faixaHorario: {
-                        ...prev.faixaHorario,
-                        horarios: updates
-                      }
+                      faixaHorario: updates
                     }));
                   }}
                 />
