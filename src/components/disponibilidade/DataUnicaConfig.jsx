@@ -6,8 +6,13 @@ import Calendar from '@/components/Calendar';
 import { TrashIcon } from '@heroicons/react/24/outline';
 import { normalizeDate, normalizeDateString } from '@/utils/dateUtils';
 
-export default function DataUnicaConfig({ datas = {}, onChange, isWeekly = false }) {
-  const [modalConfig, setModalConfig] = useState({ isOpen: false, dateKey: null, horarios: [] });
+export default function DataUnicaConfig({ datas = {}, onChange, ultimoHorario = [] }) {
+  const [modalConfig, setModalConfig] = useState({
+    isOpen: false,
+    dateKey: null,
+    horarios: [],
+    showReplicacao: false
+  });
   const [hoveredWeekday, setHoveredWeekday] = useState(null);
 
   const verificarReplicacao = (dataAtual) => {
@@ -31,50 +36,29 @@ export default function DataUnicaConfig({ datas = {}, onChange, isWeekly = false
     });
   };
 
-  const handleDateClick = (date) => {
-    if (!date) return;
+  const handleDateClick = (dates) => {
+    if (!dates || !dates.length) return;
     
-    const dateStr = normalizeDateString(date);
-    const horarios = datas?.[dateStr] || [];
-    const showReplicacao = verificarReplicacao(dateStr);
-
+    const dateStr = normalizeDateString(dates[0]);
     setModalConfig({
       isOpen: true,
       dateKey: dateStr,
-      horarios,
-      showReplicacao
+      horarios: datas[dateStr] || ultimoHorario,
+      showReplicacao: false
     });
   };
 
   const handleHorarioConfirm = (horarioData) => {
     if (modalConfig.dateKey) {
       const { horarios: horariosNovos, replicar } = horarioData;
-      
-      if (!horariosNovos || horariosNovos.length === 0) {
-        const novasDatas = { ...datas };
-        delete novasDatas[modalConfig.dateKey];
-        onChange(novasDatas);
-        setModalConfig({ isOpen: false, dateKey: null, horarios: [] });
-        return;
-      }
-
       const novasDatas = { ...datas };
-      novasDatas[modalConfig.dateKey] = horariosNovos;
 
-      if (replicar?.tipo === 'todos') {
-        if (isWeekly) {
-          Object.keys(datas).forEach(data => {
-            if (data !== modalConfig.dateKey && datas[data]?.length > 0) {
-              novasDatas[data] = horariosNovos;
-            }
-          });
-        } else {
-          Object.keys(datas).forEach(data => {
-            if (data !== modalConfig.dateKey) {
-              novasDatas[data] = horariosNovos;
-            }
-          });
-        }
+      if (!horariosNovos || horariosNovos.length === 0) {
+        // Se não tiver horários, remove a data
+        delete novasDatas[modalConfig.dateKey];
+      } else {
+        // Adiciona os novos horários
+        novasDatas[modalConfig.dateKey] = horariosNovos;
       }
 
       onChange(novasDatas);
@@ -87,14 +71,27 @@ export default function DataUnicaConfig({ datas = {}, onChange, isWeekly = false
   };
 
   const handleCalendarSelect = (dates) => {
-    if (dates && !Array.isArray(dates)) {
-      handleDateClick(dates);
-      return;
-    }
+    console.log('DataUnicaConfig handleCalendarSelect:', dates);
+    
+    // Se não houver data selecionada
+    if (!dates) return;
 
-    if (Array.isArray(dates) && dates.length > 0) {
-      handleDateClick(dates[0]);
-    }
+    // Converte para array se for uma única data
+    const datesArray = Array.isArray(dates) ? dates : [dates];
+    
+    // Se o array estiver vazio, não faz nada
+    if (datesArray.length === 0) return;
+
+    // Pega a última data selecionada
+    const lastDate = datesArray[datesArray.length - 1];
+    const dateStr = normalizeDateString(lastDate);
+
+    setModalConfig({
+      isOpen: true,
+      dateKey: dateStr,
+      horarios: datas[dateStr] || ultimoHorario,
+      showReplicacao: verificarReplicacao(dateStr)
+    });
   };
 
   const handleDayMouseEnter = (date) => {
@@ -119,13 +116,23 @@ export default function DataUnicaConfig({ datas = {}, onChange, isWeekly = false
     return horario?.inicio && horario?.fim ? `${horario.inicio} às ${horario.fim}` : '';
   };
 
+  const handleHorariosSave = (horarios) => {
+    const newDatas = {
+      ...datas,
+      [selectedDate]: horarios
+    };
+    console.log('DataUnicaConfig handleHorariosSave:', { selectedDate, horarios, newDatas });
+    onChange(newDatas);
+    setModalConfig({ isOpen: false, dateKey: null, horarios: [] });
+  };
+
   return (
     <div className="space-y-6">
       <div className="bg-gray-800 rounded-lg p-4">
         <Calendar
-          mode="multiple"
+          mode="single"
           selected={selectedDates}
-          onChange={handleDateClick}
+          onChange={handleCalendarSelect}
           minDate={normalizeDate(new Date())}
           classNames={{
             day_selected: "bg-orange-500 text-white hover:bg-orange-600",

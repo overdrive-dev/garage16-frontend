@@ -20,7 +20,7 @@ import {
 import { auth, googleProvider, facebookProvider } from '../config/firebase';
 import { useRouter } from 'next/navigation';
 import Cookies from 'js-cookie';
-import { ToastContainer } from '@/components/Toast';
+import { toast } from '@/components/ui/toast';
 
 const AuthContext = createContext({});
 const db = getFirestore();
@@ -28,20 +28,7 @@ const db = getFirestore();
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [toasts, setToasts] = useState([]);
   const router = useRouter();
-
-  // Função para adicionar toast
-  const addToast = (message, type) => {
-    const id = Date.now();
-    setToasts(prev => [...prev, { id, message, type }]);
-    setTimeout(() => removeToast(id), 5000);
-  };
-
-  // Função para remover toast
-  const removeToast = (id) => {
-    setToasts(prev => prev.filter(toast => toast.id !== id));
-  };
 
   // Função para definir o cookie de autenticação
   const setAuthCookie = async (user) => {
@@ -287,14 +274,11 @@ export function AuthProvider({ children }) {
         perfilCompleto: isCompletingProfile ? true : prev?.perfilCompleto
       }));
 
-      // Mostra feedback de sucesso
-      addToast('Perfil atualizado com sucesso!', 'success');
-
+      toast.success('Perfil atualizado com sucesso!');
       return true;
     } catch (error) {
       console.error('Erro ao atualizar perfil:', error);
-      // Mostra feedback de erro
-      addToast('Erro ao atualizar perfil. Tente novamente.', 'error');
+      toast.error('Erro ao atualizar perfil. Tente novamente.');
       throw error;
     }
   };
@@ -340,11 +324,11 @@ export function AuthProvider({ children }) {
         enderecos
       }));
 
-      addToast('Endereço salvo com sucesso!', 'success');
+      toast.success('Endereço salvo com sucesso!');
       return true;
     } catch (error) {
       console.error('Erro ao salvar endereço:', error);
-      addToast('Erro ao salvar endereço. Tente novamente.', 'error');
+      toast.error('Erro ao salvar endereço. Tente novamente.');
       throw error;
     }
   };
@@ -377,11 +361,11 @@ export function AuthProvider({ children }) {
         enderecos
       }));
 
-      addToast('Endereço excluído com sucesso!', 'success');
+      toast.success('Endereço excluído com sucesso!');
       return true;
     } catch (error) {
       console.error('Erro ao excluir endereço:', error);
-      addToast('Erro ao excluir endereço. Tente novamente.', 'error');
+      toast.error('Erro ao excluir endereço. Tente novamente.');
       throw error;
     }
   };
@@ -400,21 +384,11 @@ export function AuthProvider({ children }) {
       isProfileComplete,
       confirmPasswordReset,
       saveEndereco,
-      deleteEndereco,
-      toasts,
-      removeToast
+      deleteEndereco
     }}>
       {children}
-      {toasts.length > 0 && (
-        <ToastContainer
-          toasts={toasts}
-          removeToast={removeToast}
-        />
-      )}
     </AuthContext.Provider>
   );
 }
 
-export const useAuth = () => {
-  return useContext(AuthContext);
-}; 
+export const useAuth = () => useContext(AuthContext); 

@@ -5,6 +5,7 @@ import { DisponibilidadeProvider } from '@/contexts/DisponibilidadeContext'
 import Header from '@/components/Header'
 import Footer from '@/components/Footer'
 import AnnouncementBar from '@/components/AnnouncementBar'
+import { ToastContainer } from '@/components/ui/toast';
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -25,6 +26,7 @@ export default function RootLayout({ children }) {
               {children}
             </div>
             <Footer />
+            <ToastContainer />
           </DisponibilidadeProvider>
         </AuthProvider>
       </body>

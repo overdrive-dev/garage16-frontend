@@ -5,7 +5,7 @@ import HorarioModal from './HorarioModal';
 import { normalizeDate, normalizeDateString, isValidDate } from '@/utils/dateUtils';
 import { useState } from 'react';
 
-export default function PeriodoConfig({ datas = {}, onChange }) {
+export default function PeriodoConfig({ datas = {}, onChange, ultimoHorario = [] }) {
   const [selectedPeriod, setSelectedPeriod] = useState({ from: null, to: null });
   const [modalConfig, setModalConfig] = useState({
     isOpen: false,
@@ -31,10 +31,21 @@ export default function PeriodoConfig({ datas = {}, onChange }) {
         to: range.to
       };
       
+      // Limpa os horários existentes fora do range
+      const novosDatas = {};
+      Object.entries(datas).forEach(([data, horarios]) => {
+        const dataObj = new Date(data);
+        if (dataObj >= range.from && dataObj <= range.to) {
+          novosDatas[data] = horarios;
+        }
+      });
+      
+      onChange(novosDatas);
+      
       setModalConfig({
         isOpen: true,
         dateKey: dateStr,
-        horarios: datas[dateStr] || [],
+        horarios: datas[dateStr] || ultimoHorario,
         showReplicacao: false,
         periodo,
         isNewRange: true
@@ -122,7 +133,7 @@ export default function PeriodoConfig({ datas = {}, onChange }) {
     setModalConfig({
       isOpen: true,
       dateKey: dateStr,
-      horarios: datas[dateStr] || [],
+      horarios: datas[dateStr] || ultimoHorario,
       showReplicacao: true,
       periodo: selectedPeriod,
       isNewRange: false
