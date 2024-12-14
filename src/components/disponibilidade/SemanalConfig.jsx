@@ -1,9 +1,11 @@
-import { useState } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import HorarioModal from './HorarioModal';
 import Calendar from '../Calendar';
 import { format, isAfter, startOfDay, eachDayOfInterval, endOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { TrashIcon } from '@heroicons/react/24/outline';
+import { TrashIcon, ExclamationTriangleIcon, PencilIcon, PlusIcon } from '@heroicons/react/24/outline';
+import { useDisponibilidade } from '@/contexts/DisponibilidadeContext';
+import { normalizeDate, normalizeDateString } from '@/utils/dateUtils';
 
 const diasDaSemana = [
   { key: 'dom', label: 'Domingo' },
@@ -16,65 +18,81 @@ const diasDaSemana = [
 ];
 
 export default function SemanalConfig({ horarios, onChange, datasDisponiveis = [] }) {
+  const { storeSettings } = useDisponibilidade();
   const [modalConfig, setModalConfig] = useState({
     isOpen: false,
     diaSemana: null,
     horarios: []
   });
   const [hoveredWeekday, setHoveredWeekday] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  // Verifica se um dia está disponível nas configurações da loja
+  const isDiaDisponivelNaLoja = (diaSemana) => {
+    const diaConfig = storeSettings?.weekDays?.[diaSemana];
+    return diaConfig?.active !== false && diaConfig?.slots?.length > 0;
+  };
 
   // Verifica se uma data está disponível para configuração
   const isDataDisponivel = (date) => {
+    if (!date) return false;
+    
+    // Primeiro verifica se o dia da semana está disponível na loja
+    const diaSemana = diasDaSemana[date.getDay()].key;
+    if (!isDiaDisponivelNaLoja(diaSemana)) return false;
+    
     // Se não houver lista de datas disponíveis, considera todas disponíveis
     if (!datasDisponiveis.length) return true;
     
+    // Normaliza a data para comparação
+    const dateStr = normalizeDateString(date);
+    
     // Verifica se a data está na lista de datas disponíveis
-    return datasDisponiveis.some(dataDisp => {
-      const dataDispDate = new Date(dataDisp);
-      return date.getDate() === dataDispDate.getDate() &&
-             date.getMonth() === dataDispDate.getMonth() &&
-             date.getFullYear() === dataDispDate.getFullYear();
-    });
+    return datasDisponiveis.some(dataDisp => normalizeDateString(dataDisp) === dateStr);
   };
 
   // Verifica se um dia da semana está ativo
   const isDiaSemanaAtivo = (diaSemana) => {
-    return horarios[diaSemana]?.ativo && horarios[diaSemana].horarios.length > 0;
+    const diaConfig = horarios[diaSemana];
+    return isDiaDisponivelNaLoja(diaSemana) && diaConfig?.ativo && Array.isArray(diaConfig?.horarios) && diaConfig.horarios.length > 0;
   };
 
   // Converte os dias ativos em datas para o calendário
   const getDiasAtivos = () => {
-    const hoje = startOfDay(new Date());
+    if (!horarios) return [];
+
+    const hoje = normalizeDate(new Date());
     const todasDatasDoMes = eachDayOfInterval({
-      start: startOfDay(hoje),
+      start: hoje,
       end: endOfMonth(hoje)
     });
 
     return todasDatasDoMes.filter(data => {
       const diaSemana = diasDaSemana[data.getDay()].key;
-      const diaAtivo = horarios[diaSemana]?.ativo && horarios[diaSemana].horarios.length > 0;
-      const isFutureDate = isAfter(startOfDay(data), startOfDay(new Date()));
+      const diaAtivo = isDiaSemanaAtivo(diaSemana);
+      const isFutureDate = isAfter(normalizeDate(data), hoje);
       return diaAtivo && isFutureDate && isDataDisponivel(data);
     });
   };
 
-  const diasAtivos = getDiasAtivos();
+  const diasAtivos = useMemo(() => getDiasAtivos(), [horarios, storeSettings]);
 
   const handleCalendarSelect = (dates) => {
-    console.log('\n=== handleCalendarSelect ===');
-    console.log('Datas selecionadas:', dates?.map(d => d.toISOString().split('T')[0]));
-    
     if (!dates || !dates.length) return;
     
     const date = dates[0];
-    if (!isDataDisponivel(date)) {
-      console.log('Data não disponível:', date.toISOString().split('T')[0]);
+    const diaSemana = diasDaSemana[date.getDay()].key;
+
+    // Verifica se o dia está disponível na loja
+    if (!isDiaDisponivelNaLoja(diaSemana)) {
+      setError('Este dia não está disponível para agendamento.');
       return;
     }
 
-    const diaSemana = diasDaSemana[date.getDay()].key;
-    console.log('Dia da semana selecionado:', diaSemana);
-    console.log('===================\n');
+    if (!isDataDisponivel(date)) {
+      return;
+    }
 
     handleOpenModal(diaSemana);
   };
@@ -90,6 +108,12 @@ export default function SemanalConfig({ horarios, onChange, datasDisponiveis = [
   };
 
   const toggleDia = (dia) => {
+    // Verifica se o dia está disponível na loja
+    if (!isDiaDisponivelNaLoja(dia)) {
+      setError('Este dia não está disponível para agendamento.');
+      return;
+    }
+
     const diaConfig = horarios[dia];
     
     if (!diaConfig.ativo || !diaConfig.horarios.length) {
@@ -105,83 +129,90 @@ export default function SemanalConfig({ horarios, onChange, datasDisponiveis = [
     }
   };
 
-  const handleHorarioConfirm = (horarioData) => {
-    console.log('\n=== handleHorarioConfirm ===');
-    console.log('Dados recebidos:', horarioData);
-    console.log('Estado atual:', modalConfig);
-    
-    if (modalConfig.diaSemana) {
-      const { horarios: horariosNovos, replicar } = horarioData;
-      const novoHorarios = { ...horarios };
-      const horarioAtual = horarios[modalConfig.diaSemana]?.horarios || [];
+  const handleHorarioConfirm = async (horarioData) => {
+    setError(null);
+    setIsLoading(true);
+    try {
+      if (modalConfig.diaSemana) {
+        // Verifica se o dia está disponível na loja
+        if (!isDiaDisponivelNaLoja(modalConfig.diaSemana)) {
+          throw new Error('Este dia não está disponível para agendamento.');
+        }
 
-      // Função para adicionar horário a um dia específico
-      const adicionarHorarioAoDia = (dia) => {
-        novoHorarios[dia] = {
-          ativo: true,
-          horarios: horariosNovos
+        const { horarios: horariosNovos, replicar } = horarioData;
+        const novoHorarios = { ...horarios };
+        const horarioAtual = horarios[modalConfig.diaSemana]?.horarios || [];
+
+        // Função para adicionar horário a um dia específico
+        const adicionarHorarioAoDia = (dia) => {
+          // Verifica se o dia está disponível na loja
+          if (!isDiaDisponivelNaLoja(dia)) return;
+
+          // Filtra apenas os horários disponíveis na loja
+          const horariosPermitidos = horariosNovos.filter(horario => 
+            storeSettings?.weekDays?.[dia]?.slots?.includes(horario)
+          );
+
+          if (horariosPermitidos.length > 0) {
+            novoHorarios[dia] = {
+              ativo: true,
+              horarios: horariosPermitidos
+            };
+          }
         };
-        console.log(`Adicionando horários ao dia ${dia}:`, horariosNovos);
-      };
 
-      // Se está removendo horários
-      if (horariosNovos.length === 0) {
-        console.log('Removendo horários do dia:', modalConfig.diaSemana);
-        novoHorarios[modalConfig.diaSemana] = {
-          ativo: false,
-          horarios: []
-        };
-      } else {
-        // Adiciona apenas ao dia atual
-        adicionarHorarioAoDia(modalConfig.diaSemana);
+        // Se está removendo horários
+        if (horariosNovos.length === 0) {
+          novoHorarios[modalConfig.diaSemana] = {
+            ativo: false,
+            horarios: []
+          };
+        } else {
+          // Adiciona apenas ao dia atual
+          adicionarHorarioAoDia(modalConfig.diaSemana);
 
-        // Se houver replicação, adiciona aos outros dias selecionados
-        if (replicar) {
-          console.log('Replicando horários...');
-          // Pega apenas os dias que já estão ativos
-          const diasAtivos = Object.entries(horarios)
-            .filter(([_, config]) => config.ativo && config.horarios.length > 0)
-            .map(([dia]) => dia);
+          // Se houver replicação, adiciona aos outros dias ativos
+          if (replicar) {
+            // Pega apenas os dias que já estão ativos
+            const diasAtivos = Object.entries(horarios)
+              .filter(([dia, config]) => isDiaDisponivelNaLoja(dia) && config.ativo && config.horarios.length > 0)
+              .map(([dia]) => dia);
 
-          console.log('Dias ativos encontrados:', diasAtivos);
-
-          if (replicar.tipo === 'todos') {
+            // Replica para todos os dias ativos
             diasAtivos.forEach(dia => {
               if (dia !== modalConfig.diaSemana) {
                 adicionarHorarioAoDia(dia);
               }
             });
-          } else if (replicar.tipo === 'especificos') {
-            replicar.dias
-              .filter(dia => diasAtivos.includes(dia))
-              .forEach(dia => {
-                if (dia !== modalConfig.diaSemana) {
-                  adicionarHorarioAoDia(dia);
-                }
-              });
           }
         }
-      }
 
-      console.log('Novo estado dos horários:', novoHorarios);
-      onChange(novoHorarios);
+        onChange(novoHorarios);
+      }
+    } catch (err) {
+      setError(err.message || 'Erro ao salvar horários. Tente novamente.');
+    } finally {
+      setIsLoading(false);
+      setModalConfig({ isOpen: false, diaSemana: null, horarios: [] });
     }
-    console.log('===================\n');
-    setModalConfig({ isOpen: false, diaSemana: null, horarios: [] });
   };
+
+  // Memoiza os dias configurados para evitar recálculos
+  const diasConfigurados = useMemo(() => {
+    return Object.entries(horarios)
+      .reduce((acc, [dia, config]) => {
+        if (isDiaDisponivelNaLoja(dia) && config.ativo && config.horarios.length > 0) {
+          acc.push(dia);
+        }
+        return acc;
+      }, []);
+  }, [horarios, storeSettings]);
 
   // Verifica se deve mostrar replicação
   const verificarReplicacao = (diaSemana) => {
-    // Verifica se o dia atual tem horários configurados (está editando)
-    const horariosDoDia = horarios[diaSemana]?.horarios || [];
-    const estaEditando = horariosDoDia.length > 0;
-
-    // Conta quantas datas configuradas existem (excluindo o dia atual)
-    const diasConfigurados = Object.entries(horarios)
-      .filter(([dia, config]) => dia !== diaSemana && config.ativo && config.horarios.length > 0);
-
-    // Deve exibir replicação se houver outros dias configurados
-    return diasConfigurados.length > 0;
+    // Filtra o dia atual dos dias configurados
+    return diasConfigurados.length > 1 || 
+           (diasConfigurados.length === 1 && diasConfigurados[0] !== diaSemana);
   };
 
   const handleModalClose = () => {
@@ -189,6 +220,12 @@ export default function SemanalConfig({ horarios, onChange, datasDisponiveis = [
   };
 
   const handleOpenModal = (diaSemana) => {
+    // Verifica se o dia está disponível na loja
+    if (!isDiaDisponivelNaLoja(diaSemana)) {
+      setError('Este dia não está disponível para agendamento.');
+      return;
+    }
+
     setModalConfig({
       isOpen: true,
       diaSemana,
@@ -199,86 +236,152 @@ export default function SemanalConfig({ horarios, onChange, datasDisponiveis = [
 
   const isDateActive = (date) => {
     const diaSemana = diasDaSemana[date.getDay()].key;
-    const isAtivo = horarios[diaSemana]?.ativo && horarios[diaSemana].horarios.length > 0;
-    const isFutureDate = isAfter(startOfDay(date), startOfDay(new Date()));
+    const isAtivo = isDiaSemanaAtivo(diaSemana);
+    const isFutureDate = isAfter(normalizeDate(date), normalizeDate(new Date()));
     return isAtivo && isFutureDate;
+  };
+
+  // Função para verificar se uma data está desabilitada
+  const isDateDisabled = (date) => {
+    if (!date) return true;
+    
+    // Primeiro verifica se o dia da semana está disponível na loja
+    const diaSemana = diasDaSemana[date.getDay()].key;
+    if (!isDiaDisponivelNaLoja(diaSemana)) {
+      return true;
+    }
+    
+    // Se não houver lista de datas disponíveis, considera todas disponíveis
+    if (!datasDisponiveis.length) return false;
+    
+    // Normaliza a data para comparação
+    const dateStr = normalizeDateString(date);
+    
+    // Verifica se a data está na lista de datas disponíveis
+    return !datasDisponiveis.some(dataDisp => normalizeDateString(dataDisp) === dateStr);
+  };
+
+  // Função para formatar os horários de forma padronizada
+  const formatHorarios = (horarios) => {
+    return horarios
+      .sort()
+      .map((h, idx) => (
+        <span key={h} className="inline-block">
+          <span className="text-gray-300">{h}</span>
+          {idx < horarios.length - 1 && <span className="text-gray-500 mx-1">•</span>}
+        </span>
+      ));
   };
 
   return (
     <div className="space-y-8">
+      {/* Mensagens de Feedback */}
+      {error && (
+        <div className="bg-red-500/10 border border-red-500/20 p-4 rounded-lg animate-fade-in">
+          <p className="text-red-200 flex items-center">
+            <ExclamationTriangleIcon className="h-5 w-5 mr-2" />
+            {error}
+          </p>
+        </div>
+      )}
+      
       {/* Calendário */}
-      <div className="bg-gray-800 rounded-lg p-4">
+      <div className="bg-gray-800 rounded-lg p-4 transform transition-all duration-200 hover:shadow-lg">
         <Calendar
           mode="multiple"
           selected={diasAtivos}
           onChange={handleCalendarSelect}
           weekView={true}
-          minDate={startOfDay(new Date())}
-          disabledDates={datasDisponiveis.length > 0 ? 
-            (date) => !isDataDisponivel(date) 
-            : undefined
-          }
+          minDate={normalizeDate(new Date())}
+          disabledDates={isDateDisabled}
           onDayMouseEnter={handleDayMouseEnter}
           onDayMouseLeave={handleDayMouseLeave}
+          classNames={{
+            day_selected: "bg-orange-500 text-white hover:bg-orange-600 transform transition-all duration-200 scale-110",
+            day_today: "bg-gray-700 text-white",
+          }}
         />
       </div>
 
       {/* Lista de dias */}
       <div className="space-y-4">
-        {diasDaSemana.map(({ key, label }) => (
-          <div 
-            key={key} 
-            className="bg-gray-800 rounded-lg p-4"
-          >
-            <div className="flex items-center space-x-4">
-              <div className="w-48">
-                <div className="text-gray-200 text-lg font-medium">{label}</div>
-              </div>
-              
-              {horarios[key]?.ativo && horarios[key].horarios.length > 0 ? (
-                <>
-                  <div className="flex-1">
-                    <button
-                      type="button"
-                      onClick={() => handleOpenModal(key)}
-                      className="w-full bg-gray-700/50 rounded p-4 hover:bg-gray-700/70 text-left text-gray-200"
-                    >
-                      {horarios[key].horarios.join(' - ')}
-                    </button>
+        {diasDaSemana.map(({ key: dia, label }) => {
+          const config = horarios[dia] || { ativo: false, horarios: [] };
+          const isDisabled = !isDiaDisponivelNaLoja(dia);
+          const isHovered = hoveredWeekday === dia;
+          const isAtivo = isDiaSemanaAtivo(dia);
+
+          return (
+            <div
+              key={dia}
+              className={`
+                bg-gray-800 rounded-lg p-4 transition-all duration-200
+                ${isDisabled ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-700/50 cursor-pointer'}
+                ${isHovered ? 'ring-2 ring-orange-500/50' : ''}
+                ${isAtivo ? 'border border-orange-500/50' : ''}
+              `}
+              onClick={() => !isDisabled && handleOpenModal(dia)}
+              onMouseEnter={() => setHoveredWeekday(dia)}
+              onMouseLeave={() => setHoveredWeekday(null)}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center space-x-2">
+                    <span className="text-gray-200 font-medium">{label}</span>
+                    {isAtivo && (
+                      <span className="bg-orange-500/20 text-orange-400 text-xs px-2 py-0.5 rounded-full">
+                        {config.horarios.length} horário{config.horarios.length !== 1 ? 's' : ''}
+                      </span>
+                    )}
                   </div>
+                  {isAtivo && (
+                    <div className="text-sm mt-1 truncate">
+                      {formatHorarios(config.horarios)}
+                    </div>
+                  )}
+                </div>
+                {!isDisabled && (
                   <button
-                    type="button"
-                    onClick={() => toggleDia(key)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (isAtivo) {
+                        onChange({
+                          ...horarios,
+                          [dia]: {
+                            ativo: false,
+                            horarios: []
+                          }
+                        });
+                      } else {
+                        handleOpenModal(dia);
+                      }
+                    }}
                     className="p-2 text-gray-400 hover:text-gray-300 transition-colors"
                   >
-                    <TrashIcon className="w-5 h-5" />
+                    {isAtivo ? (
+                      <TrashIcon className="w-5 h-5 hover:text-red-400" />
+                    ) : (
+                      <PlusIcon className="w-5 h-5" />
+                    )}
                   </button>
-                </>
-              ) : (
-                <div className="flex-1">
-                  <button
-                    type="button"
-                    onClick={() => toggleDia(key)}
-                    className="w-full bg-gray-700/50 rounded p-4 hover:bg-gray-700/70 text-center text-gray-400"
-                  >
-                    Clique para adicionar horários
-                  </button>
-                </div>
-              )}
+                )}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
+      {/* Modal de Horários */}
       <HorarioModal
         isOpen={modalConfig.isOpen}
         onClose={handleModalClose}
         onConfirm={handleHorarioConfirm}
         selectedHorarios={modalConfig.horarios}
-        data={modalConfig.diaSemana}
         showReplicacao={modalConfig.showReplicacao}
-        tipoConfiguracao="semanal"
+        isLoading={isLoading}
+        diaSemana={modalConfig.diaSemana}
+        horariosDisponiveis={modalConfig.diaSemana ? storeSettings?.weekDays?.[modalConfig.diaSemana]?.slots || [] : []}
       />
     </div>
   );
-} 
+}

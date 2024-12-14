@@ -1,20 +1,33 @@
-import { useState } from 'react';
-import { format, parse, startOfDay, addDays, isAfter } from 'date-fns';
+import { useState, useMemo, useEffect } from 'react';
+import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import HorarioModal from './HorarioModal';
 import Calendar from '@/components/Calendar';
-import { TrashIcon } from '@heroicons/react/24/outline';
+import { TrashIcon, PencilIcon } from '@heroicons/react/24/outline';
+import { normalizeDate, normalizeDateString } from '@/utils/dateUtils';
+import { useDisponibilidade } from '@/contexts/DisponibilidadeContext';
 
-export default function DataUnicaConfig({ datas = {}, onChange, isWeekly = false }) {
+export default function DataUnicaConfig({ datas = {}, onChange, ultimoHorario = [] }) {
+  const { availableSlots, storeSettings } = useDisponibilidade();
+  
+  // Log inicial dos props recebidos
+  console.log('[DataUnicaConfig] Props iniciais:', {
+    datasRecebidas: datas,
+    ultimoHorarioRecebido: ultimoHorario,
+    availableSlots: availableSlots?.slots ? Object.keys(availableSlots.slots).length : 0,
+    storeSettingsPresente: !!storeSettings
+  });
+  
+  // Garantir que estamos trabalhando com o objeto correto de horários
+  const horariosConfig = datas?.horarios || {};
+
   const [modalConfig, setModalConfig] = useState({
     isOpen: false,
     dateKey: null,
-    horarios: []
+    horarios: [],
+    showReplicacao: false
   });
 
-<<<<<<< Updated upstream
-  const [hoveredWeekday, setHoveredWeekday] = useState(null);
-=======
   // Memoriza as datas disponíveis para evitar recálculos
   const availableDates = useMemo(() => {
     if (!availableSlots?.slots) return [];
@@ -62,88 +75,113 @@ export default function DataUnicaConfig({ datas = {}, onChange, isWeekly = false
     // Combina os slots e remove duplicatas
     return Array.from(new Set([...slotsLoja, ...slotsData])).sort();
   };
->>>>>>> Stashed changes
 
-  // Função isolada para verificar se deve mostrar replicação
   const verificarReplicacao = (dataAtual) => {
-    console.log('\n=== Verificação de Replicação (Data Única) ===');
-    console.log('Data sendo verificada:', dataAtual);
-    console.log('Estado atual das datas:', datas);
+    const datasConfiguradas = Object.entries(horariosConfig)
+      .filter(([data, horarios]) => data !== dataAtual && horarios && horarios.length > 0)
+      .map(([data]) => data);
 
-    // Verifica se a data atual tem horários configurados (está editando)
-    const horariosDaData = datas[dataAtual];
-    console.log('Horários da data atual:', horariosDaData);
-    
-    const estaEditando = horariosDaData && horariosDaData.length > 0;
-    console.log('Está editando?', estaEditando);
-
-    // Conta quantas datas configuradas existem (excluindo a data atual)
-    const datasConfiguradas = Object.entries(datas || {})
-      .filter(([data, horarios]) => data !== dataAtual && horarios && horarios.length > 0);
-    
-    console.log('Datas configuradas (excluindo atual):', datasConfiguradas);
-    console.log('Quantidade de datas configuradas:', datasConfiguradas.length);
-
-    // Se estiver editando, usa os horários existentes, senão usa os horários do modal
-    const horariosSelecionados = estaEditando ? horariosDaData : [];
-    console.log('Horários considerados:', horariosSelecionados);
-
-    // Deve exibir replicação se houver outras datas configuradas
-    const deveExibirReplicacao = datasConfiguradas.length > 0;
-    console.log('Deve exibir replicação?', deveExibirReplicacao);
-    console.log('Motivo:', deveExibirReplicacao 
-      ? 'Existem outras datas configuradas' 
-      : 'Não existem outras datas configuradas');
-    console.log('=====================================\n');
-    
-    return deveExibirReplicacao;
+    return datasConfiguradas.length > 0;
   };
 
-  const handleDateClick = (date) => {
-    console.log('\n=== Clique na Data ===');
-    console.log('Data clicada:', date);
-    
-    // Ajusta para o fuso horário local
-    const localDate = addDays(startOfDay(date), 1);
-    const dateStr = localDate.toISOString().split('T')[0];
-    console.log('Data ajustada:', dateStr);
-    
-    const horarios = datas?.[dateStr] || [];
-    console.log('Horários existentes:', horarios);
-    
+  const handleListClick = (dateStr) => {
+    const horarios = horariosConfig?.[dateStr] || [];
     const showReplicacao = verificarReplicacao(dateStr);
-    console.log('Mostrar replicação?', showReplicacao);
+    const date = normalizeDate(dateStr);
+    const diaSemana = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sab'][date.getDay()];
+    
+    // Pega os slots disponíveis da loja e da data específica
+    const slotsLoja = storeSettings?.weekDays?.[diaSemana]?.slots || [];
+    const slotsData = availableSlots?.slots?.[dateStr] || [];
+    const horariosDisponiveis = Array.from(new Set([...slotsLoja, ...slotsData])).sort();
 
-    console.log('Configurando modal com:', {
-      isOpen: true,
-      dateKey: dateStr,
-      horarios,
-      showReplicacao
+    console.log('[DataUnicaConfig] Clique na lista:', {
+      dateStr,
+      diaSemana,
+      slotsLoja,
+      slotsData,
+      horariosDisponiveis,
+      horariosSelecionados: horarios,
+      showReplicacao,
+      storeSettings: !!storeSettings
     });
-    console.log('===================\n');
+
+    // Se não houver horários disponíveis, não abre o modal
+    if (horariosDisponiveis.length === 0) {
+      console.log('[DataUnicaConfig] Data sem horários disponíveis:', dateStr);
+      return;
+    }
 
     setModalConfig({
       isOpen: true,
       dateKey: dateStr,
       horarios,
+      horariosDisponiveis,
+      showReplicacao
+    });
+  };
+
+  const handleCalendarSelect = (date) => {
+    if (!date) {
+      console.log('[DataUnicaConfig] Tentativa de seleção com data nula');
+      return;
+    }
+
+    // Normaliza a data selecionada
+    const normalizedDate = normalizeDate(date);
+    const dateStr = normalizeDateString(normalizedDate);
+    const diaSemana = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sab'][normalizedDate.getDay()];
+
+    // Pega os slots disponíveis da loja e da data específica
+    const slotsLoja = storeSettings?.weekDays?.[diaSemana]?.slots || [];
+    const slotsData = availableSlots?.slots?.[dateStr] || [];
+    const horariosDisponiveis = Array.from(new Set([...slotsLoja, ...slotsData])).sort();
+
+    console.log('[DataUnicaConfig] Seleção de data:', {
+      dataOriginal: date.toLocaleString('pt-BR'),
+      dataNormalizada: normalizedDate.toLocaleString('pt-BR'),
+      dateStr,
+      diaSemana,
+      slotsLoja,
+      slotsData,
+      horariosDisponiveis,
+      storeSettings: !!storeSettings
+    });
+
+    // Se não houver horários disponíveis, não abre o modal
+    if (horariosDisponiveis.length === 0) {
+      console.log('[DataUnicaConfig] Data sem horários disponíveis:', dateStr);
+      return;
+    }
+
+    // Verifica se deve mostrar a opção de replicação
+    const showReplicacao = verificarReplicacao(dateStr);
+
+    console.log('[DataUnicaConfig] Abrindo modal:', {
+      dateStr,
+      horariosDisponiveis,
+      horariosSelecionados: horariosConfig[dateStr] || ultimoHorario,
+      showReplicacao
+    });
+
+    setModalConfig({
+      isOpen: true,
+      dateKey: dateStr,
+      horarios: horariosConfig[dateStr] || ultimoHorario,
+      horariosDisponiveis,
       showReplicacao
     });
   };
 
   const handleHorarioConfirm = (horarioData) => {
+    console.log('[DataUnicaConfig] Confirmação de horários:', {
+      dateKey: modalConfig.dateKey,
+      horariosSelecionados: horarioData.horarios,
+      replicar: horarioData.replicar
+    });
+
     if (modalConfig.dateKey) {
       const { horarios: horariosNovos, replicar } = horarioData;
-<<<<<<< Updated upstream
-      
-      // Se não houver horários, remove a data
-      if (!horariosNovos || horariosNovos.length === 0) {
-        console.log('Removendo data:', modalConfig.dateKey);
-        const novasDatas = { ...datas };
-        delete novasDatas[modalConfig.dateKey];
-        onChange(novasDatas);
-        setModalConfig({ isOpen: false, dateKey: null, horarios: [] });
-        return;
-=======
       const novasHorarios = { ...horariosConfig };
 
       // Verifica se os horários selecionados estão disponíveis
@@ -163,16 +201,18 @@ export default function DataUnicaConfig({ datas = {}, onChange, isWeekly = false
       } else {
         // Adiciona os horários válidos
         novasHorarios[modalConfig.dateKey] = horariosValidos.sort();
->>>>>>> Stashed changes
       }
 
-      // Cria um novo objeto para armazenar todas as datas
-      const novasDatas = { ...datas };
+      // Se tem replicação habilitada
+      if (replicar) {
+        console.log('[DataUnicaConfig] Iniciando replicação de horários');
+        
+        // Pega todas as datas configuradas
+        const datasConfiguradas = Object.keys(horariosConfig)
+          .filter(data => data !== modalConfig.dateKey)
+          .map(data => normalizeDate(data))
+          .filter(Boolean);
 
-<<<<<<< Updated upstream
-      // Adiciona os horários à data atual
-      novasDatas[modalConfig.dateKey] = horariosNovos;
-=======
         // Para cada data configurada
         datasConfiguradas.forEach(dataObj => {
           const dateStr = normalizeDateString(dataObj);
@@ -184,165 +224,107 @@ export default function DataUnicaConfig({ datas = {}, onChange, isWeekly = false
           });
           
           const horariosValidosData = horariosNovos.filter(h => horariosDisponiveisData.includes(h));
->>>>>>> Stashed changes
 
-      // Se houver replicação, aplica de acordo com o tipo de configuração
-      if (replicar?.tipo === 'todos') {
-        if (isWeekly) {
-          // No modo semanal, replica apenas para dias já configurados
-          console.log('Replicando horários no modo semanal');
-          console.log('Dias já configurados:', Object.keys(datas));
-          
-          Object.keys(datas).forEach(data => {
-            if (data !== modalConfig.dateKey && datas[data]?.length > 0) {
-              console.log('Replicando para:', data);
-              novasDatas[data] = horariosNovos;
-            }
-          });
-        } else {
-          // Para outros modos (data única/período), mantém a lógica original
-          Object.keys(datas).forEach(data => {
-            if (data !== modalConfig.dateKey) {
-              novasDatas[data] = horariosNovos;
-            }
-          });
-        }
+          if (horariosValidosData.length > 0) {
+            novasHorarios[dateStr] = horariosValidosData.sort();
+          }
+        });
       }
 
-      onChange(novasDatas);
+      console.log('[DataUnicaConfig] Configuração final:', {
+        antes: horariosConfig,
+        depois: novasHorarios
+      });
+
+      onChange(novasHorarios);
     }
-    setModalConfig({ isOpen: false, dateKey: null, horarios: [] });
+    setModalConfig({ isOpen: false, dateKey: null, horarios: [], showReplicacao: false });
   };
 
   const handleModalClose = () => {
     setModalConfig({ isOpen: false, dateKey: null, horarios: [] });
   };
 
-  const handleCalendarSelect = (dates) => {
-    if (dates.length === 1) {
-      handleDateClick(dates[0]);
-    } else {
-      dates.forEach(date => handleDateClick(date));
-    }
-  };
+  // Memoriza as datas selecionadas
+  const selectedDates = useMemo(() => {
+    if (!datas?.horarios) return [];
+    return Object.keys(datas.horarios)
+      .map(dateStr => normalizeDate(dateStr))
+      .filter(Boolean);
+  }, [datas?.horarios]);
 
-  const handleDayMouseEnter = (date) => {
-    if (!isWeekly) return; // Apenas no modo semanal
-    const dayOfWeek = date.getDay(); // 0 (Dom) a 6 (Sáb)
-    setHoveredWeekday(dayOfWeek);
-  };
-
-  const handleDayMouseLeave = () => {
-    if (!isWeekly) return; // Apenas no modo semanal
-    setHoveredWeekday(null);
-  };
-
-  // Converte as datas string para objetos Date para o calendário
-  const selectedDates = Object.keys(datas || {}).map(dateStr => {
-    const date = new Date(dateStr);
-    return startOfDay(date);
-  });
-
-  const formatHorario = (horario) => {
-    if (typeof horario === 'string') {
-      return horario;
-    }
-    return horario?.inicio && horario?.fim ? `${horario.inicio} às ${horario.fim}` : '';
+  // Função para formatar os horários de forma padronizada
+  const formatHorarios = (horarios) => {
+    return horarios
+      .sort()
+      .map((h, idx) => (
+        <span key={h} className="inline-block">
+          <span className="text-gray-300">{h}</span>
+          {idx < horarios.length - 1 && <span className="text-gray-500 mx-1">•</span>}
+        </span>
+      ));
   };
 
   return (
     <div className="space-y-6">
-      {/* Calendário */}
       <div className="bg-gray-800 rounded-lg p-4">
         <Calendar
           mode="multiple"
           selected={selectedDates}
           onChange={handleCalendarSelect}
-          minDate={startOfDay(new Date())}
+          minDate={normalizeDate(new Date())}
+          disabledDates={isDateDisabled}
           classNames={{
             day_selected: "bg-orange-500 text-white hover:bg-orange-600",
             day_today: "bg-gray-700 text-white",
-            day_matches_hovered: isWeekly ? (date) => {
-              // Verifica se o dia da semana do 'date' corresponde ao 'hoveredWeekday' e se é uma data futura
-              return hoveredWeekday !== null && date.getDay() === hoveredWeekday && isAfter(date, new Date());
-            } : null
           }}
-          hoveredWeekday={isWeekly ? hoveredWeekday : null}
-          onDayMouseEnter={handleDayMouseEnter}
-          onDayMouseLeave={handleDayMouseLeave}
         />
       </div>
 
-      {/* Lista de datas */}
-      <div className="space-y-4">
-        {Object.entries(datas || {}).sort().map(([data, horarios = []]) => (
-          <div key={data} className="bg-gray-800 rounded-lg p-4">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h3 className="text-lg font-medium text-gray-100">
-                  {format(new Date(data), "dd 'de' MMMM", { locale: ptBR })}
-                </h3>
-                <p className="text-sm text-gray-400">
-                  {horarios.length} horário{horarios.length !== 1 ? 's' : ''} configurado{horarios.length !== 1 ? 's' : ''}
-                </p>
-              </div>
-              <button
-                onClick={() => {
-                  console.log('Removendo data:', data);
-                  console.log('Estado atual das datas:', datas);
-                  
-                  // Cria uma cópia do objeto datas
-                  const novasDatas = Object.entries(datas || {})
-                    .filter(([key]) => key !== data)
-                    .reduce((acc, [key, value]) => {
-                      acc[key] = value;
-                      return acc;
-                    }, {});
-                  
-                  console.log('Novas datas após remoção:', novasDatas);
-                  onChange(novasDatas);
-                }}
-                className="text-gray-400 hover:text-gray-300"
-                title="Desmarcar data"
-              >
-                <TrashIcon className="h-5 w-5" />
-              </button>
-            </div>
+      <div className="space-y-2">
+        {Object.entries(horariosConfig)
+          .sort(([dataA], [dataB]) => normalizeDate(dataA) - normalizeDate(dataB))
+          .map(([data, horarios]) => {
+            const dataObj = normalizeDate(data);
+            if (!dataObj) return null;
 
-            <button 
-              className="w-full bg-gray-700/50 rounded p-4 hover:bg-gray-700/70 text-left"
-              onClick={() => handleDateClick(new Date(data))}
-            >
-              {horarios.length > 0 ? (
-                <div className="text-gray-200">
-                  {horarios.map((horario, index) => (
-                    <span key={index}>
-                      {formatHorario(horario)}
-                      {index < horarios.length - 1 && ', '}
-                    </span>
-                  ))}
+            return (
+              <div 
+                key={data} 
+                className="bg-gray-800 rounded-lg p-4 transition-all duration-200 hover:bg-gray-700/50 cursor-pointer"
+                onClick={() => handleListClick(data)}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center space-x-2">
+                      <span className="text-gray-200 font-medium">
+                        {format(dataObj, "EEEE, dd 'de' MMMM", { locale: ptBR })}
+                      </span>
+                      <span className="bg-orange-500/20 text-orange-400 text-xs px-2 py-0.5 rounded-full">
+                        {horarios.length} horário{horarios.length !== 1 ? 's' : ''}
+                      </span>
+                    </div>
+                    <div className="text-sm mt-1 truncate">
+                      {formatHorarios(horarios)}
+                    </div>
+                  </div>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const novasHorarios = { ...horariosConfig };
+                      delete novasHorarios[data];
+                      onChange(novasHorarios);
+                    }}
+                    className="p-2 text-gray-400 hover:text-red-400 transition-colors"
+                  >
+                    <TrashIcon className="w-5 h-5" />
+                  </button>
                 </div>
-              ) : (
-                <div className="text-center text-gray-400">
-                  Clique para adicionar horários
-                </div>
-              )}
-            </button>
-          </div>
-        ))}
+              </div>
+            );
+          })}
       </div>
 
-<<<<<<< Updated upstream
-      <HorarioModal
-        isOpen={modalConfig.isOpen}
-        onClose={handleModalClose}
-        onConfirm={handleHorarioConfirm}
-        selectedHorarios={modalConfig.horarios}
-        data={modalConfig.dateKey ? new Date(modalConfig.dateKey) : null}
-        showReplicacao={modalConfig.showReplicacao}
-        tipoConfiguracao="unica"
-      />
-=======
       {/* Modal de Horários */}
       {modalConfig.isOpen && (
         <>
@@ -364,7 +346,6 @@ export default function DataUnicaConfig({ datas = {}, onChange, isWeekly = false
           />
         </>
       )}
->>>>>>> Stashed changes
     </div>
   );
 } 
