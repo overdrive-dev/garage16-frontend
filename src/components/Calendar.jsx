@@ -17,31 +17,15 @@ import {
   endOfWeek,
   startOfMonth,
   isWithinInterval,
-  startOfDay,
   isBefore,
   isAfter,
   parseISO
 } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { normalizeDate, normalizeDateString } from '@/utils/dateUtils';
 
 function classNames(...classes) {
   return classes.filter(Boolean).join(' ');
-}
-
-// Função auxiliar para normalizar a data para o início do dia no fuso horário local
-function normalizeToLocalStartOfDay(date) {
-  if (!date) return null;
-  const localDate = new Date(date);
-  return startOfDay(localDate);
-}
-
-// Função auxiliar para converter data para string no formato YYYY-MM-DD
-function dateToString(date) {
-  if (!date) return null;
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
 }
 
 export default function Calendar({ 
@@ -56,25 +40,25 @@ export default function Calendar({
   weekView = false,
   showPreview = true
 }) {
-  const [currentMonth, setCurrentMonth] = useState(defaultMonth);
+  const [currentMonth, setCurrentMonth] = useState(normalizeDate(defaultMonth));
   const [hoveredDay, setHoveredDay] = useState(null);
   const firstDayCurrentMonth = startOfMonth(currentMonth);
 
   const days = eachDayOfInterval({
     start: startOfWeek(firstDayCurrentMonth, { locale: ptBR }),
     end: endOfWeek(endOfMonth(currentMonth), { locale: ptBR }),
-  });
+  }).map(day => normalizeDate(day));
 
   // Identifica os dias relacionados baseado no modo
   const getRelatedDays = (day) => {
     if (!hoveredDay) return false;
 
     if (weekView) {
-      return getDay(day) === getDay(hoveredDay) && isAfter(day, new Date());
+      return getDay(day) === getDay(hoveredDay) && !isBefore(day, startOfToday());
     }
 
     switch (mode) {
-      case 'period': {
+      case 'range': {
         if (!showPreview) return false;
         
         if (!selected?.from) return isSameDay(day, hoveredDay);
@@ -98,6 +82,10 @@ export default function Calendar({
   };
 
   const handleDateClick = (date) => {
+    console.log('Calendar handleDateClick - date:', date);
+    console.log('Calendar handleDateClick - selected:', selected);
+    console.log('Calendar handleDateClick - mode:', mode);
+
     if (isDateDisabled(date)) return;
 
     if (weekView) {
@@ -106,28 +94,19 @@ export default function Calendar({
     }
 
     switch (mode) {
-      case 'period': {
-        const normalizedDate = normalizeToLocalStartOfDay(date);
-        
-        console.log('Calendar - handleDateClick:', {
-          date: dateToString(normalizedDate),
-          selected: {
-            from: dateToString(selected?.from),
-            to: dateToString(selected?.to)
-          }
-        });
-        
+      case 'range': {
         if (!selected?.from || (selected.from && selected.to)) {
+          console.log('Calendar handleDateClick - iniciando nova seleção');
           onChange({ 
-            from: normalizedDate, 
+            from: date, 
             to: null 
           });
         } else {
-          const normalizedFrom = normalizeToLocalStartOfDay(selected.from);
-          const isAfterFrom = isAfter(normalizedDate, normalizedFrom) || isSameDay(normalizedDate, normalizedFrom);
+          console.log('Calendar handleDateClick - completando range');
+          const isAfterFrom = isAfter(date, selected.from) || isSameDay(date, selected.from);
           onChange({ 
-            from: isAfterFrom ? normalizedFrom : normalizedDate,
-            to: isAfterFrom ? normalizedDate : normalizedFrom
+            from: isAfterFrom ? selected.from : date,
+            to: isAfterFrom ? date : selected.from
           });
         }
         break;
@@ -135,13 +114,12 @@ export default function Calendar({
       case 'multiple': {
         const currentSelected = Array.isArray(selected) ? selected : [];
         const dateExists = currentSelected.some(d => isSameDay(d, date));
-        onChange(dateExists 
-          ? currentSelected.filter(d => !isSameDay(d, date))
-          : [...currentSelected, date]
-        );
+        onChange(date);
         break;
       }
       case 'single':
+        onChange(date);
+        break;
       default:
         onChange([date]);
         break;
@@ -151,22 +129,23 @@ export default function Calendar({
   const isDateSelected = (date) => {
     if (!selected) return false;
     
+    const normalizedDate = normalizeDate(date);
+    const today = startOfToday();
+    
     if (weekView) {
       return Array.isArray(selected) && selected.some(selectedDate => {
-        const normalizedDate = normalizeToLocalStartOfDay(selectedDate);
-        const normalizedCurrent = normalizeToLocalStartOfDay(date);
-        return getDay(normalizedDate) === getDay(normalizedCurrent) && 
-               isAfter(normalizedCurrent, startOfDay(new Date()));
+        const normalizedSelected = normalizeDate(selectedDate);
+        return getDay(normalizedSelected) === getDay(normalizedDate) && 
+               !isBefore(normalizedDate, today);
       });
     }
 
     switch (mode) {
-      case 'period': {
+      case 'range': {
         if (!selected.from) return false;
         
-        const normalizedDate = normalizeToLocalStartOfDay(date);
-        const normalizedStart = normalizeToLocalStartOfDay(selected.from);
-        const normalizedEnd = normalizeToLocalStartOfDay(selected.to);
+        const normalizedStart = normalizeDate(selected.from);
+        const normalizedEnd = normalizeDate(selected.to);
         
         if (!normalizedDate || !normalizedStart) return false;
         if (!normalizedEnd) return isSameDay(normalizedDate, normalizedStart);
@@ -181,18 +160,21 @@ export default function Calendar({
       case 'multiple':
       default:
         return Array.isArray(selected) 
-          ? selected.some(d => isSameDay(d, date))
-          : isSameDay(date, selected);
+          ? selected.some(d => isSameDay(normalizeDate(d), normalizedDate))
+          : isSameDay(normalizedDate, normalizeDate(selected));
     }
   };
 
   const isDateDisabled = (date) => {
-    if (minDate && isBefore(date, normalizeToLocalStartOfDay(minDate))) return true;
-    if (maxDate && isAfter(date, normalizeToLocalStartOfDay(maxDate))) return true;
+    const normalizedDate = normalizeDate(date);
+    if (minDate && isBefore(normalizedDate, normalizeDate(minDate))) return true;
+    if (maxDate && isAfter(normalizedDate, normalizeDate(maxDate))) return true;
     if (typeof disabledDates === 'function') {
-      return disabledDates(date);
+      return disabledDates(normalizedDate);
     }
-    return Array.isArray(disabledDates) && disabledDates.some(disabledDate => isSameDay(date, disabledDate));
+    return Array.isArray(disabledDates) && disabledDates.some(disabledDate => 
+      isSameDay(normalizedDate, normalizeDate(disabledDate))
+    );
   };
 
   return (
@@ -235,6 +217,7 @@ export default function Calendar({
           const isDisabled = isDateDisabled(day);
           const isCurrentMonth = isSameMonth(day, currentMonth);
           const isRelated = getRelatedDays(day);
+          const isTodayDate = isToday(day);
           
           return (
             <div
@@ -257,9 +240,10 @@ export default function Calendar({
                 className={classNames(
                   'mx-auto flex h-7 w-7 items-center justify-center rounded-full transition-colors',
                   isSelected && (customClassNames.day_selected || 'bg-orange-500 text-white'),
-                  !isSelected && isToday(day) && (customClassNames.day_today || 'bg-gray-700 text-white'),
-                  !isSelected && !isToday(day) && isCurrentMonth && 'text-gray-200',
-                  !isSelected && !isToday(day) && !isCurrentMonth && 'text-gray-400'
+                  !isSelected && isTodayDate && !isRelated && (customClassNames.day_today || 'bg-gray-700 text-white'),
+                  !isSelected && !isTodayDate && isCurrentMonth && 'text-gray-200',
+                  !isSelected && !isTodayDate && !isCurrentMonth && 'text-gray-400',
+                  isRelated && !isSelected && 'bg-gray-700 text-white'
                 )}
               >
                 {format(day, 'd')}
