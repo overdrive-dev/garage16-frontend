@@ -1,25 +1,47 @@
 import { NextResponse } from 'next/server';
-import { ADMIN_ROUTES } from '@/config/routes';
 
-async function isAdmin(request) {
-  // Implementar verificação real de admin
-  // Por exemplo:
-  // const session = await getSession(request);
-  // return session?.user?.role === 'admin';
-  return false;
-}
+// Rotas que requerem autenticação
+const protectedRoutes = [
+  '/perfil',
+  '/meus-anuncios',
+  '/meus-agendamentos',
+  '/veiculo/novo',
+  '/perfil/disponibilidade',
+  '/completar-cadastro'
+];
+
+// Rotas de autenticação (não devem ser acessadas se já estiver logado)
+const authRoutes = [
+  '/entrar',
+  '/criar-conta',
+  '/recuperar-senha',
+  '/nova-senha'
+];
 
 export async function middleware(request) {
-  const isAdminRoute = ADMIN_ROUTES.some(route => {
-    const routePattern = new RegExp(route.replace('[id]', '\\d+'));
-    return routePattern.test(request.nextUrl.pathname);
-  });
+  const path = request.nextUrl.pathname;
+  
+  // Verifica o cookie específico do Firebase
+  const firebaseAuthCookie = request.cookies.get('firebase-auth-token');
+  const isAuthenticated = !!firebaseAuthCookie;
 
-  if (isAdminRoute) {
-    const admin = await isAdmin(request);
-    if (!admin) {
+  // Se o usuário está logado
+  if (isAuthenticated) {
+    // Se tentar acessar uma rota de auth, redireciona para home
+    if (authRoutes.includes(path)) {
+      console.log('Usuário autenticado tentando acessar rota de auth, redirecionando para home');
       return NextResponse.redirect(new URL('/', request.url));
     }
+    // Permite acesso a rotas protegidas
+    return NextResponse.next();
+  }
+
+  // Se não está logado e tenta acessar rota protegida
+  if (protectedRoutes.some(route => path.startsWith(route))) {
+    console.log('Usuário não autenticado tentando acessar rota protegida, redirecionando para login');
+    const url = new URL('/entrar', request.url);
+    url.searchParams.set('callbackUrl', path);
+    return NextResponse.redirect(url);
   }
 
   return NextResponse.next();
@@ -27,6 +49,6 @@ export async function middleware(request) {
 
 export const config = {
   matcher: [
-    '/veiculo/:path*', // Aplica o middleware em todas as rotas de veículo
-  ]
+    '/((?!_next/static|_next/image|favicon.ico|public).*)',
+  ],
 }; 

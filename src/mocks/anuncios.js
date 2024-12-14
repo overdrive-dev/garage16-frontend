@@ -51,7 +51,7 @@ export const mockAnuncios = {
       cor: 'Verde',
       km: 45000,
       descricao: 'Moto em excelente estado, todas as revisões em dia.',
-      userId: 'user123',
+      userId: 'Ki0nY4yfm2apORlsm5WaMcWcNce2',
       createdAt: '2024-03-15T10:00:00Z',
       updatedAt: '2024-03-15T10:00:00Z'
     },
@@ -70,7 +70,7 @@ export const mockAnuncios = {
       cor: 'Branco',
       km: 3500,
       descricao: 'Superbike em estado de zero, todas as revisões na concessionária.',
-      userId: 'user123',
+      userId: '2zxE5yZP1eON5Zckn04E84T4Ii22',
       createdAt: '2024-03-14T10:00:00Z',
       updatedAt: '2024-03-15T15:00:00Z'
     },
@@ -89,7 +89,7 @@ export const mockAnuncios = {
       cor: 'Azul Racing',
       km: 25000,
       descricao: 'Moto em excelente estado, revisões em dia.',
-      userId: 'user123',
+      userId: 'Ki0nY4yfm2apORlsm5WaMcWcNce2',
       createdAt: '2024-03-13T10:00:00Z',
       updatedAt: '2024-03-14T16:30:00Z',
       motivoCancelamento: 'Veículo vendido em outro canal'
@@ -109,7 +109,7 @@ export const mockAnuncios = {
       cor: 'Vermelho',
       km: 1200,
       descricao: 'Superbike italiana em estado impecável.',
-      userId: 'user123',
+      userId: '2zxE5yZP1eON5Zckn04E84T4Ii22',
       createdAt: '2024-03-12T10:00:00Z',
       updatedAt: '2024-03-13T14:20:00Z'
     },
@@ -128,7 +128,7 @@ export const mockAnuncios = {
       cor: 'Preto',
       km: 0,
       descricao: 'Nova, zero km, pronta entrega.',
-      userId: 'user123',
+      userId: 'Ki0nY4yfm2apORlsm5WaMcWcNce2',
       createdAt: '2024-03-11T10:00:00Z',
       updatedAt: '2024-03-11T10:00:00Z'
     },
@@ -147,7 +147,7 @@ export const mockAnuncios = {
       cor: 'Laranja',
       km: 2500,
       descricao: 'Naked em excelente estado, todas as revisões em dia.',
-      userId: 'user123',
+      userId: '2zxE5yZP1eON5Zckn04E84T4Ii22',
       createdAt: '2024-03-16T10:00:00Z',
       updatedAt: '2024-03-16T10:00:00Z'
     },
@@ -166,7 +166,7 @@ export const mockAnuncios = {
       cor: 'Azul',
       km: 0,
       descricao: 'Moto 0km, pronta entrega.',
-      userId: 'user123',
+      userId: 'Ki0nY4yfm2apORlsm5WaMcWcNce2',
       createdAt: '2024-03-16T11:00:00Z',
       updatedAt: '2024-03-16T11:00:00Z'
     }
@@ -186,7 +186,7 @@ export const mockAnuncios = {
       cor: 'Prata',
       km: 12000,
       descricao: 'Naked em excelente estado.',
-      userId: 'user123',
+      userId: '2zxE5yZP1eON5Zckn04E84T4Ii22',
       createdAt: '2024-03-10T10:00:00Z',
       updatedAt: '2024-03-10T10:00:00Z'
     },
@@ -204,7 +204,7 @@ export const mockAnuncios = {
       cor: null,
       km: null,
       descricao: null,
-      userId: 'user123',
+      userId: 'Ki0nY4yfm2apORlsm5WaMcWcNce2',
       createdAt: '2024-03-09T10:00:00Z',
       updatedAt: '2024-03-09T10:00:00Z'
     }

@@ -12,7 +12,7 @@ import {
 import { useAuth } from '@/contexts/AuthContext';
 import UserAvatar from './UserAvatar';
 
-export default function Header() {
+export default function Header({ simple = false }) {
   const router = useRouter();
   const pathname = usePathname();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -21,6 +21,24 @@ export default function Header() {
   const [searchTerm, setSearchTerm] = useState('');
   const { user, logout } = useAuth();
   const isAdmin = user?.email === 'admin@garage16.com';
+
+  // Se for modo simples, retorna apenas o logo centralizado
+  if (simple) {
+    return (
+      <header className="bg-gray-900">
+        <div className="w-full mx-auto px-4 sm:px-6 lg:px-8">
+          <nav className="w-full mx-auto">
+            <div className="flex justify-center items-center h-16 md:h-20">
+              <Link href="/" className="flex items-center pointer-events-none">
+                <span className="text-white text-2xl font-bold">GARAGE</span>
+                <span className="text-orange-500 text-2xl font-bold">16</span>
+              </Link>
+            </div>
+          </nav>
+        </div>
+      </header>
+    );
+  }
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -191,10 +209,10 @@ export default function Header() {
                 </div>
               ) : (
                 <Link
-                  href="/login"
+                  href="/entrar"
                   className="bg-orange-500 text-white px-4 py-2 rounded-md hover:bg-orange-600 transition-colors"
                 >
-                  Login
+                  Entrar
                 </Link>
               )}
             </div>
@@ -291,10 +309,10 @@ export default function Header() {
                   </button>
                 ) : (
                   <Link
-                    href="/login"
+                    href="/entrar"
                     className="block w-full text-left bg-orange-500 text-white px-3 py-2 rounded-md hover:bg-orange-600 transition-colors"
                   >
-                    Login
+                    Entrar
                   </Link>
                 )}
               </div>

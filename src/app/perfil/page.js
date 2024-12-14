@@ -1,42 +1,95 @@
 'use client'
 
-import { useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import UserAvatar from '@/components/UserAvatar';
+import { useAuth } from '@/contexts/AuthContext';
 import Breadcrumb from '@/components/Breadcrumb';
+import UserAvatar from '@/components/UserAvatar';
+import ListaEnderecos from '@/components/ListaEnderecos';
 
 export default function PerfilPage() {
-  const { user, updateUserProfile } = useAuth();
+  const { user, updateUserProfile, saveEndereco, deleteEndereco } = useAuth();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
-    nome: user?.displayName || '',
+    nome: user?.nome || user?.displayName || '',
     email: user?.email || '',
-    cpf: user?.cpf || '',
-    telefone: user?.telefone || '',
-    endereco: user?.endereco || '',
-    cidade: user?.cidade || '',
-    estado: user?.estado || ''
+    whatsapp: user?.whatsapp || '',
+    notificacoes: {
+      email: user?.notificacoes?.email ?? true,
+      whatsapp: user?.notificacoes?.whatsapp ?? true
+    }
   });
+
+  // Atualiza o formData quando o user mudar
+  useEffect(() => {
+    if (user) {
+      setFormData({
+        nome: user.nome || user.displayName || '',
+        email: user.email || '',
+        whatsapp: user.whatsapp || '',
+        notificacoes: {
+          email: user.notificacoes?.email ?? true,
+          whatsapp: user.notificacoes?.whatsapp ?? true
+        }
+      });
+    }
+  }, [user]);
+
+  // Função de salvamento com debounce
+  const debouncedSave = useCallback(
+    async (data) => {
+      setLoading(true);
+      try {
+        await updateUserProfile(data);
+      } catch (error) {
+        console.error('Erro ao atualizar perfil:', error);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [updateUserProfile]
+  );
+
+  // Efeito para salvar automaticamente quando houver mudanças
+  useEffect(() => {
+    const hasChanges = 
+      formData.nome !== (user?.nome || user?.displayName) ||
+      formData.whatsapp !== user?.whatsapp ||
+      formData.notificacoes.email !== user?.notificacoes?.email ||
+      formData.notificacoes.whatsapp !== user?.notificacoes?.whatsapp;
+
+    if (hasChanges && user) {
+      const timeoutId = setTimeout(() => {
+        debouncedSave(formData);
+      }, 1000); // Aguarda 1 segundo após a última alteração
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [formData, user, debouncedSave]);
 
   const breadcrumbItems = [
     { label: 'Home', href: '/' },
     { label: 'Perfil' }
   ];
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-
-    try {
-      await updateUserProfile(formData);
-      // Feedback de sucesso
-    } catch (error) {
-      console.error('Erro ao atualizar perfil:', error);
-      // Feedback de erro
-    } finally {
-      setLoading(false);
+  const handleChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    
+    if (name.startsWith('notificacoes.')) {
+      const notificationType = name.split('.')[1];
+      setFormData(prev => ({
+        ...prev,
+        notificacoes: {
+          ...prev.notificacoes,
+          [notificationType]: checked
+        }
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        [name]: value
+      }));
     }
   };
 
@@ -56,107 +109,98 @@ export default function PerfilPage() {
               </div>
             </div>
 
-            {/* Formulário */}
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="space-y-6">
               {/* Informações Pessoais */}
               <div className="bg-gray-800 rounded-lg p-6 space-y-6">
-                <h2 className="text-lg font-medium text-white">Informações Pessoais</h2>
+                <div className="flex items-center justify-between">
+                  <h2 className="text-lg font-medium text-white">Informações Pessoais</h2>
+                  {loading && (
+                    <span className="text-sm text-gray-400">Salvando...</span>
+                  )}
+                </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Nome */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-200">Nome</label>
-                    <input
-                      type="text"
-                      value={formData.nome}
-                      onChange={(e) => setFormData({...formData, nome: e.target.value})}
-                      className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-gray-100 focus:outline-none focus:ring-2 focus:ring-orange-500"
-                    />
+                <div className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Nome */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-200">Nome</label>
+                      <input
+                        type="text"
+                        name="nome"
+                        value={formData.nome}
+                        onChange={handleChange}
+                        className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-gray-100 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                      />
+                    </div>
+
+                    {/* Email - Desabilitado */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-200">Email</label>
+                      <input
+                        type="email"
+                        value={formData.email}
+                        disabled
+                        className="mt-1 block w-full bg-gray-700/50 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-gray-400 cursor-not-allowed"
+                      />
+                    </div>
+
+                    {/* WhatsApp */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-200">WhatsApp</label>
+                      <input
+                        type="tel"
+                        name="whatsapp"
+                        value={formData.whatsapp}
+                        onChange={handleChange}
+                        className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-gray-100 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                      />
+                    </div>
                   </div>
 
-                  {/* Email - Desabilitado */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-200">Email</label>
-                    <input
-                      type="email"
-                      value={formData.email}
-                      disabled
-                      className="mt-1 block w-full bg-gray-700/50 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-gray-400 cursor-not-allowed"
-                    />
-                  </div>
+                  {/* Preferências de Notificação */}
+                  <div className="space-y-4 pt-6 border-t border-gray-700">
+                    <h3 className="text-lg font-medium text-white">Preferências de Notificação</h3>
+                    
+                    <div className="space-y-4">
+                      <div className="flex items-center">
+                        <input
+                          type="checkbox"
+                          name="notificacoes.email"
+                          checked={formData.notificacoes.email}
+                          onChange={handleChange}
+                          className="h-4 w-4 rounded border-gray-600 bg-gray-700 text-orange-500 focus:ring-orange-500 focus:ring-offset-gray-800"
+                        />
+                        <label className="ml-2 block text-sm text-gray-200">
+                          Receber notificações por email
+                        </label>
+                      </div>
 
-                  {/* CPF - Desabilitado */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-200">CPF</label>
-                    <input
-                      type="text"
-                      value={formData.cpf}
-                      disabled
-                      className="mt-1 block w-full bg-gray-700/50 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-gray-400 cursor-not-allowed"
-                    />
-                  </div>
-
-                  {/* Telefone */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-200">Telefone</label>
-                    <input
-                      type="tel"
-                      value={formData.telefone}
-                      onChange={(e) => setFormData({...formData, telefone: e.target.value})}
-                      className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-gray-100 focus:outline-none focus:ring-2 focus:ring-orange-500"
-                    />
+                      <div className="flex items-center">
+                        <input
+                          type="checkbox"
+                          name="notificacoes.whatsapp"
+                          checked={formData.notificacoes.whatsapp}
+                          onChange={handleChange}
+                          className="h-4 w-4 rounded border-gray-600 bg-gray-700 text-orange-500 focus:ring-orange-500 focus:ring-offset-gray-800"
+                        />
+                        <label className="ml-2 block text-sm text-gray-200">
+                          Receber notificações por WhatsApp
+                        </label>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
 
-              {/* Endereço */}
-              <div className="bg-gray-800 rounded-lg p-6 space-y-6">
-                <h2 className="text-lg font-medium text-white">Endereço</h2>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-200">Endereço</label>
-                    <input
-                      type="text"
-                      value={formData.endereco}
-                      onChange={(e) => setFormData({...formData, endereco: e.target.value})}
-                      className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-gray-100 focus:outline-none focus:ring-2 focus:ring-orange-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-200">Cidade</label>
-                    <input
-                      type="text"
-                      value={formData.cidade}
-                      onChange={(e) => setFormData({...formData, cidade: e.target.value})}
-                      className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-gray-100 focus:outline-none focus:ring-2 focus:ring-orange-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-200">Estado</label>
-                    <input
-                      type="text"
-                      value={formData.estado}
-                      onChange={(e) => setFormData({...formData, estado: e.target.value})}
-                      className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-gray-100 focus:outline-none focus:ring-2 focus:ring-orange-500"
-                    />
-                  </div>
-                </div>
+              {/* Lista de Endereços */}
+              <div className="bg-gray-800 rounded-lg p-6">
+                <ListaEnderecos
+                  enderecos={user?.enderecos || []}
+                  onSave={saveEndereco}
+                  onDelete={deleteEndereco}
+                />
               </div>
-
-              {/* Botões */}
-              <div className="flex justify-end space-x-4">
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="px-4 py-2 bg-orange-500 text-white rounded-md hover:bg-orange-600 transition-colors disabled:bg-gray-600 disabled:cursor-not-allowed"
-                >
-                  {loading ? 'Salvando...' : 'Salvar Alterações'}
-                </button>
-              </div>
-            </form>
+            </div>
           </div>
         </div>
       </div>
