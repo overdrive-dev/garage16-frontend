@@ -7,6 +7,7 @@ import { useDisponibilidade } from '@/contexts/DisponibilidadeContext';
 import DataUnicaConfig from '@/components/disponibilidade/DataUnicaConfig';
 import SemanalConfig from '@/components/disponibilidade/SemanalConfig';
 import PeriodoConfig from '@/components/disponibilidade/PeriodoConfig';
+import { format } from 'date-fns';
 
 const estadoInicial = {
   tipo: null,

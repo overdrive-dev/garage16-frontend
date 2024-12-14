@@ -134,8 +134,51 @@ export default function Calendar({
     }
   };
 
+  const handleDateClick = (date) => {
+    if (isDateDisabled(date)) return;
+
+    // Cria uma nova data usando os componentes da data original
+    const normalizedDate = new Date(
+      date.getFullYear(),
+      date.getMonth(),
+      date.getDate()
+    );
+
+    if (mode === 'single') {
+      onChange(normalizedDate);
+    } else if (mode === 'multiple') {
+      const currentSelected = selected || [];
+      
+      if (weekView) {
+        onChange([normalizedDate]);
+      } else {
+        onChange([normalizedDate]);
+      }
+    } else if (mode === 'range') {
+      if (!selected?.from || (selected.from && selected.to)) {
+        onChange({ from: normalizedDate, to: null });
+      } else {
+        const { from } = selected;
+        // Normaliza a data inicial também
+        const normalizedFrom = new Date(
+          from.getFullYear(),
+          from.getMonth(),
+          from.getDate()
+        );
+        
+        if (isBefore(normalizedDate, normalizedFrom)) {
+          onChange({ from: normalizedDate, to: normalizedFrom });
+        } else {
+          onChange({ from: normalizedFrom, to: normalizedDate });
+        }
+      }
+    }
+  };
+
   const isDateSelected = (date) => {
     if (!selected) return false;
+    
+    const normalizedDate = new Date(date);
     
     const normalizedDate = normalizeDate(date);
     const today = startOfToday();
