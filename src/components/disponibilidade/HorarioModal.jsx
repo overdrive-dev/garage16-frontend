@@ -2,7 +2,7 @@ import { Fragment, useState, useEffect } from 'react';
 import { Dialog, Transition } from '@headlessui/react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { formatDateDisplay, normalizeDate } from '@/utils/dateUtils';
+import { formatDateDisplay, normalizeDate, isValidDate } from '@/utils/dateUtils';
 import { eachDayOfInterval } from 'date-fns';
 
 export default function HorarioModal({ 
@@ -246,9 +246,22 @@ export default function HorarioModal({
     </div>
   );
 
+  // Função para formatar a data do título
+  const formatarDataTitulo = () => {
+    if (!data || !isValidDate(data)) {
+      return 'Selecione os horários disponíveis';
+    }
+    try {
+      return `Horários para ${format(data, "dd 'de' MMMM", { locale: ptBR })}`;
+    } catch (error) {
+      console.error('Erro ao formatar data:', error);
+      return 'Selecione os horários disponíveis';
+    }
+  };
+
   return (
     <Transition appear show={isOpen} as={Fragment}>
-      <Dialog as="div" className="relative z-50" onClose={onClose}>
+      <Dialog as="div" className="relative z-50" onClose={handleModalClose}>
         <Transition.Child
           as={Fragment}
           enter="ease-out duration-300"
@@ -258,11 +271,11 @@ export default function HorarioModal({
           leaveFrom="opacity-100"
           leaveTo="opacity-0"
         >
-          <div className="fixed inset-0 bg-black bg-opacity-25" />
+          <div className="fixed inset-0 bg-black bg-opacity-50" />
         </Transition.Child>
 
         <div className="fixed inset-0 overflow-y-auto">
-          <div className="flex min-h-full items-center justify-center p-4 text-center">
+          <div className="flex min-h-full items-center justify-center p-4">
             <Transition.Child
               as={Fragment}
               enter="ease-out duration-300"
@@ -272,67 +285,67 @@ export default function HorarioModal({
               leaveFrom="opacity-100 scale-100"
               leaveTo="opacity-0 scale-95"
             >
-              <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded-2xl bg-gray-800 p-6 text-left align-middle shadow-xl transition-all">
-                <Dialog.Title
-                  as="h3"
-                  className="text-lg font-medium leading-6 text-gray-200"
-                >
-                  {periodo ? (
-                    <>
-                      Horários para o período de {formatDateDisplay(periodo.from, "dd/MM")} a{' '}
-                      {formatDateDisplay(periodo.to, "dd/MM")}
-                    </>
-                  ) : (
-                    'Selecione os horários'
-                  )}
-                </Dialog.Title>
-
-                <div className="mt-4">
-                  <div className="grid grid-cols-3 gap-2">
-                    {horariosDisponiveis.map((horario) => (
-                      <button
-                        key={horario}
-                        onClick={() => handleHorarioClick(horario)}
-                        className={`
-                          px-3 py-2 rounded-lg text-sm font-medium transition-colors
-                          ${horariosSelecionados.includes(horario)
-                            ? 'bg-orange-500 text-white hover:bg-orange-600'
-                            : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}
-                        `}
-                      >
-                        {horario}
-                      </button>
-                    ))}
+              <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded-lg bg-gray-800 p-6 shadow-xl transition-all">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-medium text-gray-200">
+                      {isNewRange ? 'Selecione os horários disponíveis' : formatarDataTitulo()}
+                    </h3>
+                    <button
+                      onClick={() => setHorariosSelecionados([])}
+                      className="text-sm text-gray-400 hover:text-orange-400 transition-colors"
+                    >
+                      Desmarcar todos
+                    </button>
                   </div>
 
-                  {showReplicacao && horariosSelecionados.length > 0 && (
-                    tipoConfiguracao === 'periodo' ? renderPeriodoReplicacao() : renderDefaultReplicacao()
-                  )}
+                  <div className="mt-4">
+                    <div className="grid grid-cols-3 gap-2">
+                      {horariosDisponiveis.map((horario) => (
+                        <button
+                          key={horario}
+                          onClick={() => handleHorarioClick(horario)}
+                          className={`
+                            px-3 py-2 rounded-lg text-sm font-medium transition-colors
+                            ${horariosSelecionados.includes(horario)
+                              ? 'bg-orange-500 text-white hover:bg-orange-600'
+                              : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}
+                          `}
+                        >
+                          {horario}
+                        </button>
+                      ))}
+                    </div>
 
-                  {isNewRange && periodo && horariosSelecionados.length > 0 && (
-                    <p className="text-sm text-gray-400 mt-6 bg-gray-700/50 p-3 rounded-lg">
-                      Este horário será aplicado para todas as datas do período (
-                      {formatDateDisplay(periodo.from, "dd/MM")} a{' '}
-                      {formatDateDisplay(periodo.to, "dd/MM")})
-                    </p>
-                  )}
-                </div>
+                    {showReplicacao && horariosSelecionados.length > 0 && (
+                      tipoConfiguracao === 'periodo' ? renderPeriodoReplicacao() : renderDefaultReplicacao()
+                    )}
 
-                <div className="mt-6 flex justify-end space-x-3">
-                  <button
-                    type="button"
-                    className="inline-flex justify-center rounded-lg border border-transparent bg-gray-700 px-4 py-2 text-sm font-medium text-gray-300 hover:bg-gray-600 focus:outline-none"
-                    onClick={onClose}
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    type="button"
-                    className="inline-flex justify-center rounded-lg border border-transparent bg-orange-500 px-4 py-2 text-sm font-medium text-white hover:bg-orange-600 focus:outline-none"
-                    onClick={handleConfirm}
-                  >
-                    Confirmar
-                  </button>
+                    {isNewRange && periodo && horariosSelecionados.length > 0 && (
+                      <p className="text-sm text-gray-400 mt-6 bg-gray-700/50 p-3 rounded-lg">
+                        Este horário será aplicado para todas as datas do período (
+                        {formatDateDisplay(periodo.from, "dd/MM")} a{' '}
+                        {formatDateDisplay(periodo.to, "dd/MM")})
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="mt-6 flex justify-end space-x-3">
+                    <button
+                      type="button"
+                      className="inline-flex justify-center rounded-lg border border-transparent bg-gray-700 px-4 py-2 text-sm font-medium text-gray-300 hover:bg-gray-600 focus:outline-none"
+                      onClick={onClose}
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      type="button"
+                      className="inline-flex justify-center rounded-lg border border-transparent bg-orange-500 px-4 py-2 text-sm font-medium text-white hover:bg-orange-600 focus:outline-none"
+                      onClick={handleConfirm}
+                    >
+                      Confirmar
+                    </button>
+                  </div>
                 </div>
               </Dialog.Panel>
             </Transition.Child>

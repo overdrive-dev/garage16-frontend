@@ -1,8 +1,9 @@
 import { format, startOfDay, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
+import { ChevronLeftIcon, ChevronRightIcon, LockClosedIcon, LockOpenIcon } from '@heroicons/react/24/outline';
 import Calendar from '@/components/Calendar';
-import { useEffect } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
+import ResetPeriodoModal from './ResetPeriodoModal';
 
 // Função auxiliar para normalizar a data
 function normalizeDate(date) {
@@ -17,10 +18,10 @@ function normalizeDate(date) {
     if (date instanceof Date) {
       return startOfDay(date);
     }
-    console.log('[CalendarioPeriodo] Data inválida:', date);
+    console.warn('⚠️ [CalendarioPeriodo] Data inválida:', date);
     return null;
   } catch (error) {
-    console.error('[CalendarioPeriodo] Erro ao normalizar data:', error);
+    console.error('❌ [CalendarioPeriodo] Erro ao normalizar data:', error);
     return null;
   }
 }
@@ -30,52 +31,144 @@ export default function CalendarioPeriodo({
   onChange,
   minDate = new Date()
 }) {
-  console.log('[CalendarioPeriodo] Props recebidas:', { selected, minDate });
+  // Estado para controlar se o período está travado
+  const [isPeriodoTravado, setIsPeriodoTravado] = useState(false);
+  const [showResetModal, setShowResetModal] = useState(false);
+  const [shouldClearHorarios, setShouldClearHorarios] = useState(false);
+  const [selectedRange, setSelectedRange] = useState(null);
 
-  // Efeito para garantir que as datas sejam carregadas inicialmente
+  // Memoiza as datas normalizadas para evitar cálculos desnecessários
+  const normalizedDates = useMemo(() => {
+    console.log('📅 [CalendarioPeriodo] Normalizando datas:', {
+      selected,
+      inicio: selected.inicio ? format(normalizeDate(selected.inicio), 'dd/MM/yyyy') : null,
+      fim: selected.fim ? format(normalizeDate(selected.fim), 'dd/MM/yyyy') : null
+    });
+
+    return {
+      inicio: normalizeDate(selected.inicio),
+      fim: normalizeDate(selected.fim)
+    };
+  }, [selected.inicio, selected.fim]);
+
+  // Efeito para sincronizar o estado travado com as datas selecionadas
   useEffect(() => {
-    if (selected.inicio || selected.fim) {
-      console.log('[CalendarioPeriodo] Datas selecionadas detectadas:', selected);
-      const normalizedRange = {
-        inicio: selected.inicio ? format(normalizeDate(selected.inicio), 'yyyy-MM-dd') : null,
-        fim: selected.fim ? format(normalizeDate(selected.fim), 'yyyy-MM-dd') : null
-      };
-      console.log('[CalendarioPeriodo] Carregando datas iniciais:', normalizedRange);
+    const hasValidDates = normalizedDates.inicio && normalizedDates.fim;
+    
+    console.log('🔍 [CalendarioPeriodo] Verificando datas:', {
+      hasValidDates,
+      inicio: normalizedDates.inicio ? format(normalizedDates.inicio, 'dd/MM/yyyy') : null,
+      fim: normalizedDates.fim ? format(normalizedDates.fim, 'dd/MM/yyyy') : null,
+      isPeriodoTravado
+    });
+
+    if (hasValidDates) {
+      setSelectedRange({
+        from: normalizedDates.inicio,
+        to: normalizedDates.fim
+      });
     }
-  }, [selected]);
+  }, [normalizedDates.inicio, normalizedDates.fim]);
 
-  const handleDateSelect = (range) => {
-    console.log('[CalendarioPeriodo] Range selecionado:', range);
+  // Memoiza a função handleDateSelect para evitar re-renderizações desnecessárias
+  const handleDateSelect = useCallback((range) => {
+    console.log('👆 [CalendarioPeriodo] handleDateSelect:', range ? {
+      from: range.from ? format(range.from, 'dd/MM/yyyy') : null,
+      to: range.to ? format(range.to, 'dd/MM/yyyy') : null
+    } : null);
 
+    // Se não houver range, limpa a seleção
     if (!range) {
+      console.log('🗑️ [CalendarioPeriodo] Limpando seleção');
+      setSelectedRange(null);
       onChange({ inicio: null, fim: null });
       return;
     }
 
-    // Normaliza as datas antes de passar para o onChange
-    const normalizedRange = {
-      inicio: range.from ? format(normalizeDate(range.from), 'yyyy-MM-dd') : null,
-      fim: range.to ? format(normalizeDate(range.to), 'yyyy-MM-dd') : 
-           range.from ? format(normalizeDate(range.from), 'yyyy-MM-dd') : null
-    };
+    // Atualiza o range selecionado
+    setSelectedRange(range);
 
-    console.log('[CalendarioPeriodo] Range normalizado:', normalizedRange);
-    onChange(normalizedRange);
-  };
+    // Se for um clique único (from === to), considera como data inicial
+    if (range.from && (!range.to || range.from.getTime() === range.to.getTime())) {
+      console.log('👆 [CalendarioPeriodo] Seleção única:', format(range.from, 'dd/MM/yyyy'));
+      const normalizedDate = normalizeDate(range.from);
+      const dateStr = format(normalizedDate, 'yyyy-MM-dd');
+      
+      onChange({
+        inicio: dateStr,
+        fim: null
+      });
+      return;
+    }
 
-  // Normaliza as datas recebidas antes de passar para o Calendar
-  const normalizedSelected = {
-    from: normalizeDate(selected.inicio),
-    to: normalizeDate(selected.fim)
-  };
+    // Se tiver início e fim, normaliza e atualiza
+    if (range.from && range.to) {
+      let dataInicio = range.from;
+      let dataFim = range.to;
 
-  console.log('[CalendarioPeriodo] Selected normalizado para Calendar:', normalizedSelected);
+      // Troca as datas se necessário
+      if (dataFim < dataInicio) {
+        console.log('🔄 [CalendarioPeriodo] Trocando datas');
+        [dataInicio, dataFim] = [dataFim, dataInicio];
+      }
+
+      const normalizedRange = {
+        inicio: format(normalizeDate(dataInicio), 'yyyy-MM-dd'),
+        fim: format(normalizeDate(dataFim), 'yyyy-MM-dd')
+      };
+
+      console.log('📅 [CalendarioPeriodo] Range completo:', normalizedRange);
+      onChange(normalizedRange);
+    }
+  }, [onChange]);
+
+  // Memoiza a função handleReset
+  const handleReset = useCallback(() => {
+    console.log('🔄 [CalendarioPeriodo] Iniciando processo de reset');
+    setShowResetModal(true);
+  }, []);
+
+  // Memoiza a função confirmReset
+  const confirmReset = useCallback(() => {
+    console.log('✅ [CalendarioPeriodo] Confirmando reset:', {
+      limparHorarios: shouldClearHorarios
+    });
+    
+    setSelectedRange(null);
+    setShowResetModal(false);
+    
+    if (shouldClearHorarios) {
+      onChange({ inicio: null, fim: null });
+    }
+    
+    setShouldClearHorarios(false);
+  }, [shouldClearHorarios, onChange]);
 
   return (
     <div className="bg-gray-800 rounded-lg p-4">
+      <div className="mb-4 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <h2 className="text-gray-200 font-medium">Selecione o período</h2>
+          {selectedRange?.from && selectedRange?.to && (
+            <span className="text-sm text-gray-400">
+              {format(selectedRange.from, 'dd/MM/yyyy')} até {format(selectedRange.to, 'dd/MM/yyyy')}
+            </span>
+          )}
+        </div>
+        {selectedRange?.from && selectedRange?.to && (
+          <button
+            onClick={handleReset}
+            className="text-gray-400 hover:text-orange-400 transition-colors inline-flex items-center gap-1 text-sm"
+          >
+            <LockOpenIcon className="w-4 h-4" />
+            Resetar período
+          </button>
+        )}
+      </div>
+
       <Calendar
         mode="range"
-        selected={normalizedSelected}
+        selected={selectedRange}
         onChange={handleDateSelect}
         minDate={startOfDay(minDate)}
         classNames={{
@@ -83,9 +176,18 @@ export default function CalendarioPeriodo({
           day_today: "bg-gray-700 text-white",
           day_range_middle: "bg-orange-500/20 hover:bg-orange-500/30",
           day_range_start: "bg-orange-500 text-white rounded-l-full font-semibold",
-          day_range_end: "bg-orange-500 text-white rounded-r-full font-semibold"
+          day_range_end: "bg-orange-500 text-white rounded-r-full font-semibold",
+          day_disabled: "text-gray-500 cursor-not-allowed opacity-50"
         }}
         locale={ptBR}
+      />
+
+      <ResetPeriodoModal
+        isOpen={showResetModal}
+        onClose={() => setShowResetModal(false)}
+        onConfirm={confirmReset}
+        shouldClearHorarios={shouldClearHorarios}
+        onClearHorariosChange={setShouldClearHorarios}
       />
     </div>
   );
