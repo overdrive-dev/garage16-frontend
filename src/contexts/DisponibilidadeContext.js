@@ -92,391 +92,361 @@ export function DisponibilidadeProvider({ children }) {
   const [storeSettings, setStoreSettings] = useState(null);
   const [availableSlots, setAvailableSlots] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [initialized, setInitialized] = useState(false);
 
   // Memoriza as funções de conversão
-  const { convertToFirebase, convertFromFirebase } = useMemo(() => ({
-    convertToFirebase: (frontendData) => {
-      const firebaseData = {
-        type: frontendData.tipo,
-        config: {
-          weekDays: {
-            dom: { active: false, slots: [] },
-            seg: { active: false, slots: [] },
-            ter: { active: false, slots: [] },
-            qua: { active: false, slots: [] },
-            qui: { active: false, slots: [] },
-            sex: { active: false, slots: [] },
-            sab: { active: false, slots: [] }
-          },
-          dates: {},
-          range: {
-            start: null,
-            end: null
-          }
+  const convertToFirebase = useMemo(() => (frontendData) => {
+    const firebaseData = {
+      type: frontendData.tipo,
+      config: {
+        weekDays: {
+          dom: { active: false, slots: [] },
+          seg: { active: false, slots: [] },
+          ter: { active: false, slots: [] },
+          qua: { active: false, slots: [] },
+          qui: { active: false, slots: [] },
+          sex: { active: false, slots: [] },
+          sab: { active: false, slots: [] }
         },
-        metadata: {
-          lastUpdate: new Date().toISOString()
+        dates: {},
+        range: {
+          start: null,
+          end: null
         }
-      };
-
-      if (frontendData.tipo === 'semanal') {
-        DIAS_SEMANA.forEach(dia => {
-          const config = frontendData.semanal[dia];
-          if (config) {
-            firebaseData.config.weekDays[dia] = {
-              active: config.ativo,
-              slots: config.horarios.sort()
-            };
-          }
-        });
+      },
+      metadata: {
+        lastUpdate: new Date().toISOString()
       }
-      else if (frontendData.tipo === 'dataUnica') {
-        Object.entries(frontendData.dataUnica.horarios).forEach(([data, horarios]) => {
-          if (Array.isArray(horarios) && horarios.length > 0) {
-            firebaseData.config.dates[data] = horarios.sort();
-          }
-        });
-      }
-      else if (frontendData.tipo === 'faixaHorario') {
-        firebaseData.config.range = {
-          start: frontendData.faixaHorario.dataInicio,
-          end: frontendData.faixaHorario.dataFim
-        };
+    };
 
-        Object.entries(frontendData.faixaHorario.horarios).forEach(([data, horarios]) => {
-          if (Array.isArray(horarios) && horarios.length > 0) {
-            firebaseData.config.dates[data] = horarios.sort();
-          }
-        });
-      }
-
-      return firebaseData;
-    },
-    convertFromFirebase: (firebaseData) => {
-      if (!firebaseData || !storeSettings) {
-        return createDefaultAvailability(storeSettings);
-      }
-
-      const tipo = firebaseData.type || 'semanal';
-      const frontendData = {
-        tipo,
-        dataUnica: {
-          horarios: {}
-        },
-        semanal: {
-          dom: { ativo: false, horarios: [] },
-          seg: { ativo: false, horarios: [] },
-          ter: { ativo: false, horarios: [] },
-          qua: { ativo: false, horarios: [] },
-          qui: { ativo: false, horarios: [] },
-          sex: { ativo: false, horarios: [] },
-          sab: { ativo: false, horarios: [] }
-        },
-        faixaHorario: {
-          dataInicio: toFirebaseDate(new Date()),
-          dataFim: toFirebaseDate(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)),
-          horarios: {}
-        }
-      };
-
-      if (tipo === 'semanal') {
-        const weekDays = firebaseData.config?.weekDays || {};
-        DIAS_SEMANA.forEach(dia => {
-          const config = weekDays[dia];
-          if (!config) return;
-          
-          const diaEstaDisponivel = isDiaDisponivelNaLoja(dia, storeSettings);
-          const horariosPermitidos = Array.isArray(config.slots) 
-            ? config.slots.filter(horario => {
-                const slotsLoja = storeSettings?.weekDays?.[dia]?.slots || [];
-                return slotsLoja.includes(horario);
-              }).sort()
-            : [];
-          
-          frontendData.semanal[dia] = {
-            ativo: diaEstaDisponivel && config.active !== false && horariosPermitidos.length > 0,
-            horarios: horariosPermitidos
+    if (frontendData.tipo === 'semanal') {
+      DIAS_SEMANA.forEach(dia => {
+        const config = frontendData.semanal[dia];
+        if (config) {
+          firebaseData.config.weekDays[dia] = {
+            active: config.ativo,
+            slots: config.horarios.sort()
           };
-        });
-      } else if (tipo === 'dataUnica') {
-        const dates = firebaseData.config?.dates || {};
-        Object.entries(dates).forEach(([data, slots]) => {
-          if (!Array.isArray(slots)) return;
-          
-          const dataObj = fromFirebaseDate(data);
-          if (!dataObj) return;
-
-          const dayIndex = getDayOfWeek(dataObj);
-          const diaSemana = getDayString(dayIndex);
-          if (!diaSemana) return;
-
-          const slotsLoja = storeSettings?.weekDays?.[diaSemana]?.slots || [];
-          const horariosPermitidos = slots.filter(horario => 
-            slotsLoja.includes(horario)
-          ).sort();
-          
-          if (horariosPermitidos.length > 0) {
-            frontendData.dataUnica.horarios[data] = horariosPermitidos;
-          }
-        });
-      } else if (tipo === 'faixaHorario') {
-        const range = firebaseData.config?.range || {};
-        frontendData.faixaHorario.dataInicio = range.start || frontendData.faixaHorario.dataInicio;
-        frontendData.faixaHorario.dataFim = range.end || frontendData.faixaHorario.dataFim;
-
-        const dates = firebaseData.config?.dates || {};
-        Object.entries(dates).forEach(([data, configSlots]) => {
-          if (!Array.isArray(configSlots)) return;
-          
-          const dataObj = fromFirebaseDate(data);
-          if (!dataObj) return;
-
-          const dayIndex = getDayOfWeek(dataObj);
-          const diaSemana = getDayString(dayIndex);
-          if (!diaSemana) return;
-
-          const slotsLoja = storeSettings?.weekDays?.[diaSemana]?.slots || [];
-          const horariosPermitidos = configSlots.filter(horario => 
-            slotsLoja.includes(horario)
-          ).sort();
-          
-          if (horariosPermitidos.length > 0) {
-            frontendData.faixaHorario.horarios[data] = horariosPermitidos;
-          }
-        });
-      }
-
-      return frontendData;
-    }
-  }), [storeSettings]);
-
-  // Log inicial do estado
-  console.log('[DisponibilidadeProvider] Estado inicial:', {
-    user: !!user,
-    disponibilidade: !!disponibilidade,
-    currentConfig: !!currentConfig,
-    storeSettings: !!storeSettings,
-    loading
-  });
-
-  // Carrega slots disponíveis
-  useEffect(() => {
-    const loadAvailableSlots = async () => {
-      try {
-        const { slots } = await availabilityService.getAvailableSlots();
-        console.log('[loadAvailableSlots] Slots carregados:', slots);
-        setAvailableSlots(slots);
-      } catch (error) {
-        console.error('Erro ao carregar slots disponíveis:', error);
-      }
-    };
-
-    loadAvailableSlots();
-  }, []);
-
-  // Carrega configurações da loja
-  useEffect(() => {
-    const loadStoreSettings = async () => {
-      try {
-        const settings = await availabilityService.getStoreSettings();
-        console.log('[loadStoreSettings] Configurações carregadas:', settings);
-        setStoreSettings(settings);
-      } catch (error) {
-        console.error('Erro ao carregar configurações da loja:', error);
-      }
-    };
-
-    loadStoreSettings();
-  }, []);
-
-  // Carrega disponibilidade do usuário
-  useEffect(() => {
-    const fetchDisponibilidade = async () => {
-      console.log('[fetchDisponibilidade] Iniciando busca...', {
-        temUser: !!user,
-        temStoreSettings: !!storeSettings
-      });
-
-      try {
-        if (user) {
-          const data = await availabilityService.getUserAvailability(user.uid);
-          console.log('[fetchDisponibilidade] Dados brutos do Firebase:', data);
-          
-          const convertedData = convertFromFirebase(data);
-          console.log('[fetchDisponibilidade] Dados convertidos:', convertedData);
-          
-          setDisponibilidade(convertedData);
-          setCurrentConfig(convertedData);
-          
-          console.log('[fetchDisponibilidade] Estados atualizados:', {
-            disponibilidade: convertedData,
-            currentConfig: convertedData
-          });
         }
+      });
+    }
+    else if (frontendData.tipo === 'dataUnica') {
+      Object.entries(frontendData.dataUnica.horarios).forEach(([data, horarios]) => {
+        if (Array.isArray(horarios) && horarios.length > 0) {
+          firebaseData.config.dates[data] = horarios.sort();
+        }
+      });
+    }
+    else if (frontendData.tipo === 'faixaHorario') {
+      firebaseData.config.range = {
+        start: frontendData.faixaHorario.dataInicio,
+        end: frontendData.faixaHorario.dataFim
+      };
+
+      Object.entries(frontendData.faixaHorario.horarios).forEach(([data, horarios]) => {
+        if (Array.isArray(horarios) && horarios.length > 0) {
+          firebaseData.config.dates[data] = horarios.sort();
+        }
+      });
+    }
+
+    return firebaseData;
+  }, []);
+
+  const convertFromFirebase = useMemo(() => (firebaseData) => {
+    if (!firebaseData || !storeSettings) {
+      return createDefaultAvailability(storeSettings);
+    }
+
+    const tipo = firebaseData.type || 'semanal';
+    const frontendData = {
+      tipo,
+      dataUnica: {
+        horarios: {}
+      },
+      semanal: {
+        dom: { ativo: false, horarios: [] },
+        seg: { ativo: false, horarios: [] },
+        ter: { ativo: false, horarios: [] },
+        qua: { ativo: false, horarios: [] },
+        qui: { ativo: false, horarios: [] },
+        sex: { ativo: false, horarios: [] },
+        sab: { ativo: false, horarios: [] }
+      },
+      faixaHorario: {
+        dataInicio: null,
+        dataFim: null,
+        horarios: {}
+      }
+    };
+
+    // Processa todos os horários configurados no Firebase
+    const dates = firebaseData.config?.dates || {};
+    Object.entries(dates).forEach(([data, configSlots]) => {
+      if (!Array.isArray(configSlots)) return;
+      
+      const dataObj = fromFirebaseDate(data);
+      if (!dataObj) return;
+
+      const dayIndex = getDayOfWeek(dataObj);
+      const diaSemana = getDayString(dayIndex);
+      if (!diaSemana) return;
+
+      const slotsLoja = storeSettings?.weekDays?.[diaSemana]?.slots || [];
+      const horariosPermitidos = configSlots.filter(horario => 
+        slotsLoja.includes(horario)
+      ).sort();
+
+      // Adiciona os horários em todas as visualizações
+      frontendData.dataUnica.horarios[data] = horariosPermitidos;
+      frontendData.faixaHorario.horarios[data] = horariosPermitidos;
+    });
+
+    // Configura os horários semanais
+    const weekDays = firebaseData.config?.weekDays || {};
+    DIAS_SEMANA.forEach(dia => {
+      const config = weekDays[dia];
+      const slotsLoja = storeSettings?.weekDays?.[dia]?.slots || [];
+      
+      const diaEstaDisponivel = isDiaDisponivelNaLoja(dia, storeSettings);
+      const horariosPermitidos = Array.isArray(config?.slots) 
+        ? config.slots.filter(horario => slotsLoja.includes(horario)).sort()
+        : [];
+
+      frontendData.semanal[dia] = {
+        ativo: diaEstaDisponivel && config?.active !== false && horariosPermitidos.length > 0,
+        horarios: horariosPermitidos
+      };
+    });
+
+    // Configura o período da faixa de horário
+    const range = firebaseData.config?.range || {};
+    frontendData.faixaHorario.dataInicio = range.start || toFirebaseDate(new Date());
+    frontendData.faixaHorario.dataFim = range.end || toFirebaseDate(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000));
+
+    // Mantém o tipo original
+    frontendData.tipo = tipo;
+
+    return frontendData;
+  }, [storeSettings]);
+
+  // Função para verificar se uma data tem horários configurados
+  const hasConfiguredSlots = (data, config) => {
+    if (!data || !config) return false;
+    const dateStr = toFirebaseDate(data);
+    
+    // Verifica em todas as configurações
+    const hasInDataUnica = config.dataUnica?.horarios?.[dateStr]?.length > 0;
+    const hasInFaixaHorario = config.faixaHorario?.horarios?.[dateStr]?.length > 0;
+    
+    // Verifica na configuração semanal
+    const diaSemana = getDayString(getDayOfWeek(data));
+    const hasInSemanal = config.semanal?.[diaSemana]?.ativo && 
+                        config.semanal?.[diaSemana]?.horarios?.length > 0;
+    
+    return hasInDataUnica || hasInFaixaHorario || hasInSemanal;
+  };
+
+  // Função para obter horários de uma data específica
+  const getHorariosData = (data, config) => {
+    if (!data || !config) return [];
+    const dateStr = toFirebaseDate(data);
+    
+    // Combina horários de todas as configurações
+    const horariosDataUnica = config.dataUnica?.horarios?.[dateStr] || [];
+    const horariosFaixaHorario = config.faixaHorario?.horarios?.[dateStr] || [];
+    
+    const diaSemana = getDayString(getDayOfWeek(data));
+    const horariosSemanal = config.semanal?.[diaSemana]?.ativo ? 
+                           (config.semanal?.[diaSemana]?.horarios || []) : 
+                           [];
+    
+    // Remove duplicatas e ordena
+    return [...new Set([...horariosDataUnica, ...horariosFaixaHorario, ...horariosSemanal])].sort();
+  };
+
+  useEffect(() => {
+    const loadData = async () => {
+      setInitialized(false);
+      setLoading(true);
+
+      if (!user) {
+        setDisponibilidade(null);
+        setCurrentConfig(null);
+        setStoreSettings(null);
+        setAvailableSlots(null);
+        setHasChanges(false);
+        setLoading(false);
+        setInitialized(true);
+        return;
+      }
+
+      try {
+        const [settings, slots, data] = await Promise.all([
+          availabilityService.getStoreSettings(),
+          availabilityService.getAvailableSlots(),
+          availabilityService.getUserAvailability(user.uid)
+        ]);
+
+        setStoreSettings(settings);
+        setAvailableSlots(slots);
+
+        if (data) {
+          setDisponibilidade(data);
+          const convertedData = convertFromFirebase(data);
+          setCurrentConfig(convertedData);
+        } else {
+          const defaultConfig = createDefaultAvailability(settings);
+          defaultConfig.tipo = 'semanal'; // Define tipo padrão
+          setCurrentConfig(defaultConfig);
+          setDisponibilidade(convertToFirebase(defaultConfig));
+        }
+        setHasChanges(false);
       } catch (error) {
-        console.error('Erro ao carregar disponibilidade:', error);
+        console.error('Erro ao carregar dados:', error);
+        toast.error('Erro ao carregar configurações');
       } finally {
         setLoading(false);
+        setInitialized(true);
       }
     };
 
-    // Só carrega a disponibilidade quando tivermos as configurações da loja
-    if (storeSettings) {
-      fetchDisponibilidade();
+    loadData();
+  }, [user]);
+
+  // Função para salvar mudanças explicitamente
+  const saveChanges = async () => {
+    if (!user || !currentConfig || !hasChanges) return;
+
+    try {
+      setLoading(true);
+      const firebaseData = convertToFirebase(currentConfig);
+      await availabilityService.updateUserAvailability(user.uid, firebaseData);
+      setDisponibilidade(firebaseData);
+      setHasChanges(false);
+      toast.success('Alterações salvas com sucesso!');
+    } catch (error) {
+      console.error('Erro ao salvar alterações:', error);
+      toast.error('Erro ao salvar alterações');
+    } finally {
+      setLoading(false);
     }
-  }, [user, storeSettings, convertFromFirebase]);
+  };
 
-  // Log quando currentConfig muda
-  useEffect(() => {
-    console.log('[DisponibilidadeProvider] currentConfig atualizado:', currentConfig);
-  }, [currentConfig]);
-
-  // Log quando disponibilidade muda
-  useEffect(() => {
-    console.log('[DisponibilidadeProvider] disponibilidade atualizada:', disponibilidade);
-  }, [disponibilidade]);
-
-  // Verifica se há mudanças sempre que currentConfig mudar
-  useEffect(() => {
-    if (!disponibilidade || !currentConfig) return;
-
-    const hasRealChanges = (() => {
-      // Se não houver disponibilidade salva, compara com o padrão
-      const disponibilidadeAtual = disponibilidade || disponibilidadePadrao;
-
-      // Se mudou o tipo, verifica se tem horários configurados no novo tipo
-      if (currentConfig.tipo !== disponibilidadeAtual.tipo && 
-          !(currentConfig.tipo === 'dataUnica' && disponibilidadeAtual.tipo === 'unica') &&
-          !(currentConfig.tipo === 'unica' && disponibilidadeAtual.tipo === 'dataUnica')) {
-        let temHorarios = false;
-
-        if (currentConfig.tipo === 'semanal') {
-          temHorarios = Object.values(currentConfig.semanal).some(dia => 
-            dia.ativo && dia.horarios.length > 0
-          );
-        }
-        else if (currentConfig.tipo === 'dataUnica' || currentConfig.tipo === 'unica') {
-          const horarios = currentConfig.dataUnica?.horarios || {};
-          temHorarios = Object.values(horarios).some(slots => 
-            Array.isArray(slots) && slots.length > 0
-          );
-        }
-        else if (currentConfig.tipo === 'faixaHorario') {
-          temHorarios = Object.values(currentConfig.faixaHorario.horarios || {}).some(horarios => 
-            Array.isArray(horarios) && horarios.length > 0
-          );
-        }
-
-        return temHorarios;
-      }
-
-      // Se o tipo é o mesmo, compara os horários
-      if (currentConfig.tipo === disponibilidadeAtual.tipo || 
-          (currentConfig.tipo === 'dataUnica' && disponibilidadeAtual.tipo === 'unica') ||
-          (currentConfig.tipo === 'unica' && disponibilidadeAtual.tipo === 'dataUnica')) {
-        
-        // Normaliza os tipos para comparação
-        const tipoAtual = disponibilidadeAtual.tipo === 'unica' ? 'dataUnica' : disponibilidadeAtual.tipo;
-        const tipoNovo = currentConfig.tipo === 'unica' ? 'dataUnica' : currentConfig.tipo;
-
-        if (tipoNovo === 'semanal') {
-          // Compara cada dia da semana
-          return DIAS_SEMANA.some(dia => {
-            const configAtual = disponibilidadeAtual.semanal[dia];
-            const configNova = currentConfig.semanal[dia];
-            return (
-              configNova.ativo !== configAtual.ativo ||
-              !arraysIguais(configNova.horarios, configAtual.horarios)
-            );
-          });
-        }
-        else if (tipoNovo === 'dataUnica') {
-          // Compara os horários de cada data
-          const horariosAtuais = disponibilidadeAtual.dataUnica?.horarios || {};
-          const horariosNovos = currentConfig.dataUnica?.horarios || {};
-
-          // Se tem horários diferentes
-          if (Object.keys(horariosAtuais).length !== Object.keys(horariosNovos).length) {
-            return true;
-          }
-
-          // Verifica se todas as datas em horariosNovos existem em horariosAtuais
-          const datasNovas = Object.keys(horariosNovos);
-          const datasAtuais = Object.keys(horariosAtuais);
-          
-          if (!datasNovas.every(data => datasAtuais.includes(data))) {
-            return true;
-          }
-
-          // Compara cada data
-          return datasNovas.some(data => {
-            const horariosData = horariosNovos[data] || [];
-            const horariosAntigos = horariosAtuais[data] || [];
-            return !arraysIguais(horariosData, horariosAntigos);
-          });
-        }
-        else if (tipoNovo === 'faixaHorario') {
-          // Compara os horários de cada data no período
-          const datasAtuais = Object.keys(disponibilidadeAtual.faixaHorario.horarios || {});
-          const datasNovas = Object.keys(currentConfig.faixaHorario.horarios || {});
-
-          // Se tem datas diferentes
-          if (datasAtuais.length !== datasNovas.length) return true;
-
-          // Compara os horários de cada data
-          return datasNovas.some(data => {
-            const horariosAtuais = disponibilidadeAtual.faixaHorario.horarios[data] || [];
-            const horariosNovos = currentConfig.faixaHorario.horarios[data] || [];
-            return !arraysIguais(horariosAtuais, horariosNovos);
-          });
-        }
-      }
-
-      return false;
-    })();
-
-    setHasChanges(hasRealChanges);
-  }, [disponibilidade, currentConfig]);
-
+  // Função para atualizar a configuração atual (apenas localmente)
   const updateCurrentConfig = (updates) => {
+    if (!initialized) return; // Previne atualizações antes da inicialização
+
     setCurrentConfig(prev => {
-      // Se for uma função, executa ela
+      if (!prev) return prev;
+
       const updatedConfig = typeof updates === 'function' ? updates(prev) : updates;
       
-      // Normaliza o tipo para 'dataUnica' se for 'unica'
-      const tipo = updatedConfig.tipo === 'unica' ? 'dataUnica' : (updatedConfig.tipo || prev?.tipo);
+      // Mantém o tipo original se não for explicitamente alterado
+      const tipo = updatedConfig.tipo ? 
+        (updatedConfig.tipo === 'unica' ? 'dataUnica' : updatedConfig.tipo) : 
+        prev.tipo;
       
-      return {
+      const newConfig = {
         ...prev,
         ...updatedConfig,
         tipo
       };
+
+      // Marca que há mudanças não salvas apenas se houver diferenças reais
+      const currentFirebaseData = convertToFirebase(prev);
+      const newFirebaseData = convertToFirebase(newConfig);
+      if (JSON.stringify(currentFirebaseData) !== JSON.stringify(newFirebaseData)) {
+        setHasChanges(true);
+      }
+
+      return newConfig;
     });
   };
 
-  const updateDisponibilidade = async (novaDisponibilidade) => {
-    try {
-      if (user) {
-        console.log('[updateDisponibilidade] Iniciando atualização:', novaDisponibilidade);
+  // Função para verificar se houve alterações reais
+  const hasRealChanges = (current, original) => {
+    if (!current || !original) return false;
+
+    // Verifica alterações baseado no tipo atual
+    switch (current.tipo) {
+      case 'dataUnica': {
+        const currentDates = current.dataUnica?.horarios || {};
+        const originalDates = original.config?.dates || {};
         
-        const firebaseData = convertToFirebase(novaDisponibilidade);
-        console.log('[updateDisponibilidade] Dados convertidos para Firebase:', firebaseData);
+        // Compara apenas os horários configurados
+        const allDates = new Set([...Object.keys(currentDates), ...Object.keys(originalDates)]);
         
-        await availabilityService.updateUserAvailability(user.uid, firebaseData);
-        console.log('[updateDisponibilidade] Dados salvos no Firebase');
-        
-        // Atualiza ambos os estados
-        setDisponibilidade(novaDisponibilidade);
-        setCurrentConfig(novaDisponibilidade);
-        
-        toast.success('Disponibilidade atualizada com sucesso!');
+        return Array.from(allDates).some(date => {
+          const currentSlots = Array.isArray(currentDates[date]) ? currentDates[date] : [];
+          const originalSlots = Array.isArray(originalDates[date]) ? originalDates[date] : [];
+          return !arraysIguais([...currentSlots].sort(), [...originalSlots].sort());
+        });
       }
-    } catch (error) {
-      console.error('[updateDisponibilidade] Erro:', error);
-      toast.error('Não foi possível salvar sua disponibilidade. Tente novamente.');
-      throw error;
+      
+      case 'semanal': {
+        const currentSemanal = current.semanal || {};
+        const originalSemanal = original.config?.weekDays || {};
+        
+        return DIAS_SEMANA.some(dia => {
+          const currentDia = currentSemanal[dia] || { ativo: false, horarios: [] };
+          const originalDia = originalSemanal[dia] || { active: false, slots: [] };
+          
+          // Compara apenas se houve mudança real nos horários ou no estado ativo
+          const currentHorarios = Array.isArray(currentDia.horarios) ? [...currentDia.horarios] : [];
+          const originalSlots = Array.isArray(originalDia.slots) ? [...originalDia.slots] : [];
+          
+          const horariosChanged = !arraysIguais(
+            currentHorarios.sort(),
+            originalSlots.sort()
+          );
+          const ativoChanged = currentDia.ativo !== originalDia.active;
+          
+          return horariosChanged || ativoChanged;
+        });
+      }
+      
+      case 'faixaHorario': {
+        const currentRange = current.faixaHorario || {};
+        const originalRange = original.config?.range || {};
+        const originalDates = original.config?.dates || {};
+        
+        // Verifica mudanças nas datas do período
+        const datesChanged = currentRange.dataInicio !== originalRange.start ||
+                           currentRange.dataFim !== originalRange.end;
+        
+        // Verifica mudanças nos horários
+        const currentHorarios = currentRange.horarios || {};
+        const allDates = new Set([...Object.keys(currentHorarios), ...Object.keys(originalDates)]);
+        const horariosChanged = Array.from(allDates).some(date => {
+          const currentSlots = Array.isArray(currentHorarios[date]) ? [...currentHorarios[date]] : [];
+          const originalSlots = Array.isArray(originalDates[date]) ? [...originalDates[date]] : [];
+          return !arraysIguais(currentSlots.sort(), originalSlots.sort());
+        });
+        
+        return datesChanged || horariosChanged;
+      }
+      
+      default:
+        return false;
     }
   };
+
+  // Efeito para verificar alterações
+  useEffect(() => {
+    if (!initialized) return;
+    
+    const changes = hasRealChanges(currentConfig, disponibilidade);
+    console.log('🔍 [DisponibilidadeContext] Verificando alterações:', {
+      hasChanges: changes,
+      currentConfig,
+      disponibilidade
+    });
+    
+    setHasChanges(changes);
+  }, [currentConfig, disponibilidade, initialized]);
+
+  const isReady = initialized && !loading && storeSettings && availableSlots;
 
   return (
     <DisponibilidadeContext.Provider 
@@ -484,11 +454,15 @@ export function DisponibilidadeProvider({ children }) {
         disponibilidade,
         currentConfig,
         updateCurrentConfig,
+        saveChanges,
         hasChanges,
-        updateDisponibilidade,
         storeSettings,
         availableSlots,
-        loading 
+        loading,
+        isReady,
+        initialized,
+        hasConfiguredSlots,
+        getHorariosData
       }}
     >
       {children}

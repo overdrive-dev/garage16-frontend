@@ -22,7 +22,7 @@ import {
   parseISO
 } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { normalizeDate, normalizeDateString } from '@/utils/dateUtils';
+import { normalizeDate, normalizeDateString, getDayOfWeek } from '@/utils/dateUtils';
 
 function classNames(...classes) {
   return classes.filter(Boolean).join(' ');
@@ -40,7 +40,10 @@ export default function Calendar({
   weekView = false,
   showPreview = true,
   onDayMouseEnter,
-  onDayMouseLeave
+  onDayMouseLeave,
+  hasConfiguredSlots,
+  getHorariosData,
+  onDateClick
 }) {
   const [currentMonth, setCurrentMonth] = useState(normalizeDate(defaultMonth));
   const [hoveredDay, setHoveredDay] = useState(null);
@@ -59,7 +62,10 @@ export default function Calendar({
     if (isDateDisabled(day)) return false;
 
     if (weekView) {
-      return getDay(day) === getDay(hoveredDay) && !isBefore(day, startOfToday());
+      // No modo semanal, destaca todos os dias da mesma semana
+      const hoveredDayIndex = getDayOfWeek(hoveredDay);
+      const currentDayIndex = getDayOfWeek(day);
+      return hoveredDayIndex === currentDayIndex;
     }
 
     switch (mode) {
@@ -90,6 +96,12 @@ export default function Calendar({
   const handleDateClick = (date) => {
     if (isDateDisabled(date)) return;
 
+    // Se tiver função de clique personalizada, usa ela
+    if (onDateClick) {
+      onDateClick(date);
+      return;
+    }
+
     // Cria uma nova data usando os componentes da data original
     const normalizedDate = new Date(
       date.getFullYear(),
@@ -100,12 +112,26 @@ export default function Calendar({
     if (mode === 'single') {
       onChange(normalizedDate);
     } else if (mode === 'multiple') {
-      const currentSelected = selected || [];
+      const currentSelected = Array.isArray(selected) ? selected : [];
       
       if (weekView) {
+        // No modo semanal, mantém apenas a última seleção
         onChange([normalizedDate]);
       } else {
-        onChange([normalizedDate]);
+        // Verifica se a data já está selecionada
+        const isAlreadySelected = currentSelected.some(d => 
+          isSameDay(normalizeDate(d), normalizedDate)
+        );
+
+        if (isAlreadySelected) {
+          // Se já estiver selecionada, remove
+          onChange(currentSelected.filter(d => 
+            !isSameDay(normalizeDate(d), normalizedDate)
+          ));
+        } else {
+          // Se não estiver selecionada, adiciona
+          onChange([...currentSelected, normalizedDate]);
+        }
       }
     } else if (mode === 'range') {
       if (!selected?.from || (selected.from && selected.to)) {
@@ -119,6 +145,7 @@ export default function Calendar({
           from.getDate()
         );
         
+        // Garante que a data final é sempre maior que a inicial
         if (isBefore(normalizedDate, normalizedFrom)) {
           onChange({ from: normalizedDate, to: normalizedFrom });
         } else {
@@ -147,17 +174,20 @@ export default function Calendar({
         if (!selected.from) return false;
         
         const normalizedStart = normalizeDate(selected.from);
-        const normalizedEnd = normalizeDate(selected.to);
+        const normalizedEnd = selected.to ? normalizeDate(selected.to) : null;
         
         if (!normalizedDate || !normalizedStart) return false;
+        
+        // Se não tiver data final, mostra apenas a inicial
         if (!normalizedEnd) return isSameDay(normalizedDate, normalizedStart);
         
         // Se a data está desabilitada, não mostra como selecionada
         if (isDateDisabled(date)) return false;
         
+        // Verifica se a data está no intervalo
         return isWithinInterval(normalizedDate, { 
-          start: normalizedStart, 
-          end: normalizedEnd 
+          start: isBefore(normalizedStart, normalizedEnd) ? normalizedStart : normalizedEnd,
+          end: isBefore(normalizedStart, normalizedEnd) ? normalizedEnd : normalizedStart
         });
       }
 
@@ -205,6 +235,18 @@ export default function Calendar({
     onDayMouseLeave?.(date);
   };
 
+  // Função para verificar se uma data tem horários configurados
+  const hasSlots = (date) => {
+    if (!hasConfiguredSlots) return false;
+    return hasConfiguredSlots(date);
+  };
+
+  // Função para obter os horários de uma data
+  const getSlots = (date) => {
+    if (!getHorariosData) return [];
+    return getHorariosData(date);
+  };
+
   return (
     <div className="select-none">
       <div className="flex items-center justify-between mb-4">
@@ -239,40 +281,51 @@ export default function Calendar({
         <div>Dom</div>
       </div>
 
-      <div className="grid grid-cols-7 text-sm gap-px bg-gray-700/50 rounded-lg overflow-hidden">
+      <div className="grid grid-cols-7 gap-px bg-gray-700/50 rounded-lg overflow-hidden">
         {days.map((day, dayIdx) => {
           const isSelected = isDateSelected(day);
           const isDisabled = isDateDisabled(day);
-          const isCurrentMonth = isSameMonth(day, currentMonth);
+          const isToday = isSameDay(day, startOfToday());
           const isRelated = getRelatedDays(day);
-          const isTodayDate = isToday(day);
-          
+          const hasConfigured = hasSlots(day);
+          const slots = getSlots(day);
+
+          // Debug logs
+          if (mode === 'range' && isSelected) {
+            console.log('📅 [Calendar] Selected day:', {
+              day,
+              isSelected,
+              selected,
+              normalizedDay: normalizeDate(day)
+            });
+          }
+
+          // Combina as classes do dia
+          const dayClasses = classNames(
+            "relative min-h-[2.5rem] p-2 bg-gray-800 hover:bg-gray-700/50 transition-colors flex items-center justify-center",
+            !isSameMonth(day, firstDayCurrentMonth) && "text-gray-500",
+            isDisabled && "text-gray-500 cursor-not-allowed opacity-50 hover:bg-gray-800",
+            !isDisabled && "cursor-pointer",
+            isToday && (customClassNames.day_today || "bg-gray-700"),
+            isRelated && !isSelected && "bg-gray-700/50",
+            hasConfigured && "border-b-2 border-orange-500",
+            slots.length > 0 && "after:content-['•'] after:absolute after:bottom-1 after:right-1 after:text-orange-500"
+          );
+
           return (
             <div
               key={day.toString()}
-              className={classNames(
-                dayIdx === 0 && colStartClasses[getDay(day)],
-                'relative py-3',
-                !isCurrentMonth && 'text-gray-400',
-                isDisabled && 'cursor-not-allowed opacity-50',
-                !isDisabled && 'cursor-pointer transition-colors',
-                isRelated && 'bg-gray-700',
-                !isRelated && 'bg-gray-800 hover:bg-gray-700'
-              )}
+              className={dayClasses}
               onClick={() => !isDisabled && handleDateClick(day)}
               onMouseEnter={() => handleDayMouseEnter(day)}
               onMouseLeave={() => handleDayMouseLeave(day)}
             >
-              <time
+              <time 
                 dateTime={format(day, 'yyyy-MM-dd')}
                 className={classNames(
-                  'mx-auto flex h-7 w-7 items-center justify-center rounded-full transition-colors',
-                  isSelected && (customClassNames.day_selected || 'bg-orange-500 text-white'),
-                  !isSelected && isTodayDate && !isRelated && (customClassNames.day_today || 'bg-gray-700 text-white'),
-                  !isSelected && !isTodayDate && isCurrentMonth && 'text-gray-200',
-                  !isSelected && !isTodayDate && !isCurrentMonth && 'text-gray-400',
-                  isRelated && !isSelected && 'bg-gray-700 text-white',
-                  isDisabled && 'opacity-50 cursor-not-allowed'
+                  "flex items-center justify-center rounded-full w-7 h-7 transition-colors",
+                  isSelected && "bg-orange-500 text-white",
+                  isToday && !isSelected && "bg-gray-700 text-white"
                 )}
               >
                 {format(day, 'd')}

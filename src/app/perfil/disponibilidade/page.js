@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Dialog } from '@headlessui/react';
 import { useDisponibilidade } from '@/contexts/DisponibilidadeContext';
@@ -37,16 +37,56 @@ export default function DisponibilidadePage() {
     currentConfig,
     updateCurrentConfig,
     hasChanges,
-    updateDisponibilidade, 
+    saveChanges,
     loading 
   } = useDisponibilidade();
   const [showExitPrompt, setShowExitPrompt] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
+  useEffect(() => {
+    if (!disponibilidade || !disponibilidade.config) return;
+
+    console.log('🔄 [DisponibilidadePage] Inicializando estado com dados do Firebase:', {
+      type: disponibilidade.type,
+      config: disponibilidade.config,
+      range: disponibilidade.config.range,
+      dates: disponibilidade.config.dates
+    });
+
+    const estadoInicial = {
+      tipo: disponibilidade.type,
+      dataUnica: {
+        horarios: disponibilidade.config.dates || {}
+      },
+      semanal: {},
+      faixaHorario: {
+        dataInicio: disponibilidade.config.range?.start || new Date().toISOString().split('T')[0],
+        dataFim: disponibilidade.config.range?.end || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        horarios: disponibilidade.config.dates || {}
+      }
+    };
+
+    ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sab'].forEach(dia => {
+      const configDia = disponibilidade.config.weekDays?.[dia] || {};
+      estadoInicial.semanal[dia] = {
+        ativo: configDia.active || false,
+        horarios: configDia.slots || []
+      };
+    });
+
+    console.log('✅ [DisponibilidadePage] Estado inicial criado:', {
+      tipo: estadoInicial.tipo,
+      dados: estadoInicial[estadoInicial.tipo],
+      estadoCompleto: estadoInicial
+    });
+    
+    updateCurrentConfig(estadoInicial);
+  }, [disponibilidade]);
+
   const handleSave = async () => {
     try {
       setIsSaving(true);
-      await updateDisponibilidade(currentConfig);
+      await saveChanges();
     } catch (error) {
       console.error('Erro ao salvar disponibilidade:', error);
     } finally {
@@ -66,7 +106,7 @@ export default function DisponibilidadePage() {
   const handleConfirmNavigation = async () => {
     try {
       setIsSaving(true);
-      await updateDisponibilidade(currentConfig);
+      await saveChanges();
       router.back();
     } catch (error) {
       console.error('Erro ao salvar disponibilidade:', error);
@@ -76,20 +116,49 @@ export default function DisponibilidadePage() {
   };
 
   const handleTipoChange = (tipo) => {
+    console.log('🔄 [DisponibilidadePage] Mudando tipo:', {
+      tipoAtual: currentConfig?.tipo,
+      novoTipo: tipo,
+      currentConfig
+    });
+
     if (!currentConfig) return;
     
-    updateCurrentConfig({
-      ...currentConfig,
+    updateCurrentConfig(prev => ({
+      ...prev,
       tipo
-    });
+    }));
   };
 
   // Função para verificar se tem horários ativos em uma modalidade
   const temHorariosAtivos = (tipo) => {
     if (!disponibilidade) return false;
 
+    console.log('🔍 [DisponibilidadePage] Verificando horários ativos:', {
+      tipoVerificado: tipo,
+      tipoAtual: disponibilidade.type,
+      config: disponibilidade.config
+    });
+
     // Verifica se é o tipo configurado no Firebase
-    return disponibilidade.tipo === tipo;
+    if (disponibilidade.type === tipo) {
+      // Verifica se tem horários configurados baseado no tipo
+      switch (tipo) {
+        case 'dataUnica':
+          return Object.keys(disponibilidade.config?.dates || {}).length > 0;
+        case 'semanal':
+          return Object.values(disponibilidade.config?.weekDays || {}).some(dia => 
+            dia.active && Array.isArray(dia.slots) && dia.slots.length > 0
+          );
+        case 'faixaHorario':
+          return disponibilidade.config?.range?.start && 
+                 disponibilidade.config?.range?.end && 
+                 Object.keys(disponibilidade.config?.dates || {}).length > 0;
+        default:
+          return false;
+      }
+    }
+    return false;
   };
 
   if (loading) {
@@ -215,12 +284,12 @@ export default function DisponibilidadePage() {
               {currentConfig.tipo === 'dataUnica' && (
                 <DataUnicaConfig 
                   datas={currentConfig.dataUnica}
-                  ultimoHorario={currentConfig.dataUnica?.ultimoHorario || []}
+                  ultimoHorario={[]}
                   onChange={(novasHorarios) => {
+                    console.log('📝 [DisponibilidadePage] Atualizando horários data única:', novasHorarios);
                     updateCurrentConfig(prev => ({
                       ...prev,
                       dataUnica: {
-                        ...prev.dataUnica,
                         horarios: novasHorarios
                       }
                     }));
@@ -231,8 +300,9 @@ export default function DisponibilidadePage() {
               {currentConfig.tipo === 'semanal' && (
                 <SemanalConfig 
                   horarios={currentConfig.semanal}
-                  ultimoHorario={currentConfig.semanal?.ultimoHorario || []}
+                  ultimoHorario={[]}
                   onChange={(updates) => {
+                    console.log('📝 [DisponibilidadePage] Atualizando horários semanais:', updates);
                     updateCurrentConfig(prev => ({
                       ...prev,
                       semanal: updates
@@ -242,19 +312,36 @@ export default function DisponibilidadePage() {
               )}
 
               {currentConfig.tipo === 'faixaHorario' && (
-                <PeriodoConfig 
-                  datas={currentConfig.faixaHorario?.horarios || {}}
-                  ultimoHorario={currentConfig.faixaHorario?.ultimoHorario || []}
-                  onChange={(updates) => {
-                    updateCurrentConfig(prev => ({
-                      ...prev,
-                      faixaHorario: {
-                        ...prev.faixaHorario,
-                        horarios: updates
-                      }
-                    }));
-                  }}
-                />
+                <>
+                  {console.log('🎯 [DisponibilidadePage] Renderizando PeriodoConfig:', {
+                    horarios: currentConfig.faixaHorario?.horarios,
+                    dataInicio: currentConfig.faixaHorario?.dataInicio,
+                    dataFim: currentConfig.faixaHorario?.dataFim
+                  })}
+                  <PeriodoConfig 
+                    datas={currentConfig.faixaHorario?.horarios || {}}
+                    selectedPeriod={{
+                      from: new Date(currentConfig.faixaHorario?.dataInicio),
+                      to: new Date(currentConfig.faixaHorario?.dataFim)
+                    }}
+                    isRangeDefined={true}
+                    ultimoHorario={[]}
+                    onChange={(updates) => {
+                      console.log('📝 [DisponibilidadePage] Atualizando horários período:', {
+                        updates,
+                        configAtual: currentConfig.faixaHorario
+                      });
+
+                      updateCurrentConfig(prev => ({
+                        ...prev,
+                        faixaHorario: {
+                          ...prev.faixaHorario,
+                          horarios: updates
+                        }
+                      }));
+                    }}
+                  />
+                </>
               )}
             </div>
           </div>

@@ -5,6 +5,16 @@ import { ptBR } from 'date-fns/locale';
 import { formatDateDisplay, normalizeDate, isValidDate } from '@/utils/dateUtils';
 import { eachDayOfInterval } from 'date-fns';
 
+const DIAS_SEMANA = [
+  { nome: 'Segunda', valor: 'segunda-feira' },
+  { nome: 'Terça', valor: 'terça-feira' },
+  { nome: 'Quarta', valor: 'quarta-feira' },
+  { nome: 'Quinta', valor: 'quinta-feira' },
+  { nome: 'Sexta', valor: 'sexta-feira' },
+  { nome: 'Sábado', valor: 'sábado' },
+  { nome: 'Domingo', valor: 'domingo' }
+];
+
 export default function HorarioModal({ 
   isOpen, 
   onClose, 
@@ -27,15 +37,22 @@ export default function HorarioModal({
   // Atualiza horários selecionados quando o modal abre
   useEffect(() => {
     if (isOpen) {
-      setHorariosSelecionados(selectedHorarios);
+      // Compara os arrays antes de atualizar para evitar loop
+      const saoArraysIguais = (arr1, arr2) => {
+        if (arr1.length !== arr2.length) return false;
+        return arr1.every((item, index) => item === arr2[index]);
+      };
+
+      if (!saoArraysIguais(horariosSelecionados, selectedHorarios)) {
+        setHorariosSelecionados(selectedHorarios);
+      }
     }
-  }, [selectedHorarios, isOpen]);
+  }, [isOpen]);
 
   // Reseta seleções apenas quando o período muda
   useEffect(() => {
     if (periodo && periodoAnterior && 
         (periodo.from !== periodoAnterior.from || periodo.to !== periodoAnterior.to)) {
-      console.log('🔍 Novo período detectado, resetando seleções');
       setDiasSemana([]);
       setTipoReplicacao('nenhuma');
       setReplicar(false);
@@ -88,11 +105,6 @@ export default function HorarioModal({
 
   // Função para obter os dias da semana disponíveis no período
   const getDiasSemanaPeriodo = () => {
-    console.log('🔍 Período recebido:', {
-      from: periodo?.from ? formatDateDisplay(periodo.from) : null,
-      to: periodo?.to ? formatDateDisplay(periodo.to) : null
-    });
-
     if (!periodo?.from || !periodo?.to) return [];
 
     try {
@@ -100,10 +112,7 @@ export default function HorarioModal({
       const start = normalizeDate(periodo.from);
       const end = normalizeDate(periodo.to);
 
-      if (!start || !end) {
-        console.error('❌ Datas inválidas após normalização');
-        return [];
-      }
+      if (!start || !end) return [];
 
       // Obtém todos os dias no intervalo
       const diasDisponiveis = eachDayOfInterval({
@@ -111,32 +120,18 @@ export default function HorarioModal({
         end
       });
 
-      console.log('🔍 Dias disponíveis:', diasDisponiveis.map(d => formatDateDisplay(d)));
-
-      // Cria um Set para evitar duplicatas e mantém a ordem dos dias da semana
+      // Cria um Set para evitar duplicatas
       const diasSemanaUnicos = new Set();
-      const diasOrdenados = [
-        'domingo',
-        'segunda-feira',
-        'terça-feira',
-        'quarta-feira',
-        'quinta-feira',
-        'sexta-feira',
-        'sábado'
-      ];
       
-      // Primeiro adiciona os dias na ordem que aparecem no período
+      // Adiciona os dias na ordem que aparecem no período
       diasDisponiveis.forEach(date => {
         const diaSemana = format(date, 'EEEE', { locale: ptBR }).toLowerCase();
         diasSemanaUnicos.add(diaSemana);
       });
 
       // Converte para array mantendo a ordem correta dos dias da semana
-      const diasArray = diasOrdenados.filter(dia => diasSemanaUnicos.has(dia));
-      console.log('🔍 Dias únicos encontrados:', diasArray);
-      return diasArray;
+      return DIAS_SEMANA.map(d => d.valor).filter(dia => diasSemanaUnicos.has(dia));
     } catch (error) {
-      console.error('❌ Erro ao obter dias da semana do período:', error);
       return [];
     }
   };
@@ -145,15 +140,7 @@ export default function HorarioModal({
   const diasDaSemanaPeriodo = getDiasSemanaPeriodo();
 
   // Lista de dias da semana filtrada para mostrar apenas os dias que existem no range
-  const diasDaSemana = [
-    { nome: 'Domingo', valor: 'domingo' },
-    { nome: 'Segunda', valor: 'segunda-feira' },
-    { nome: 'Terça', valor: 'terça-feira' },
-    { nome: 'Quarta', valor: 'quarta-feira' },
-    { nome: 'Quinta', valor: 'quinta-feira' },
-    { nome: 'Sexta', valor: 'sexta-feira' },
-    { nome: 'Sábado', valor: 'sábado' }
-  ].filter(dia => diasDaSemanaPeriodo.includes(dia.valor));
+  const diasDaSemana = DIAS_SEMANA.filter(dia => diasDaSemanaPeriodo.includes(dia.valor));
 
   // Renderiza as opções de replicação para período
   const renderPeriodoReplicacao = () => (
@@ -254,7 +241,6 @@ export default function HorarioModal({
     try {
       return `Horários para ${format(data, "dd 'de' MMMM", { locale: ptBR })}`;
     } catch (error) {
-      console.error('Erro ao formatar data:', error);
       return 'Selecione os horários disponíveis';
     }
   };
